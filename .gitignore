@@ -1,0 +1,30 @@
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Build output
+dist/
+build/
+.next/
+
+# IDE / OS
+.DS_Store
+.claude/settings.local.json
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Backups
+backups/
