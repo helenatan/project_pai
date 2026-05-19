@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The PM Adaptation Index — v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:         #1c1917;
+    --ink-mid:     #3d3830;
+    --ink-light:   #57534e;
+    --ink-faint:   #6b6560;
+    --paper:       #faf8f5;
+    --paper-dark:  #f0ece6;
+    --paper-rule:  #d8d2c8;
+    --signal-red:  #c0392b;
+    --signal-blue: #1a4a7a;
+    --signal-amber:#a06010;
+    --signal-green:#2d6a4f;
+    --ramp-bg:     rgba(160,96,16,0.06);
+    --ramp-border: rgba(160,96,16,0.25);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body { background: var(--paper); color: var(--ink); font-family: 'Lora', Georgia, serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); opacity: 0.6; }
+  .page { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 2rem; }
+
+  /* ── MASTHEAD ── */
+  .masthead { border-bottom: 3px double var(--ink); padding: 2.5rem 0 1.5rem; }
+  .masthead-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem; }
+  .issue-meta { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); }
+  .publication-name { font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 6vw, 3.8rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+  .publication-sub { font-family: 'Lora', serif; font-size: 0.95rem; font-style: italic; color: var(--ink-light); margin-top: 0.4rem; }
+  .masthead-rule { border: none; border-top: 1px solid var(--ink); margin: 1rem 0 0.5rem; }
+  .masthead-bottom { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .narrative-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; padding: 0.3rem 0.75rem; border: 1px solid var(--signal-amber); color: var(--signal-amber); background: rgba(196,125,14,0.06); }
+  .narrative-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal-amber); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── HERO METRICS ── */
+  .hero-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--paper-rule); }
+  .metric-cell { padding: 1.75rem 0; border-right: 1px solid var(--paper-rule); opacity: 0; animation: fadeUp 0.6s ease forwards; }
+  .metric-cell:nth-child(1) { animation-delay: 0.08s; padding-right: 2rem; }
+  .metric-cell:nth-child(2) { animation-delay: 0.18s; padding: 1.75rem 2rem; }
+  .metric-cell:nth-child(3) { animation-delay: 0.28s; border-right: none; padding-left: 2rem; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .metric-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.5rem; }
+  .metric-value { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 600; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
+  .metric-value.ai-rate { color: var(--signal-amber); }
+  .metric-delta { font-family: 'DM Mono', monospace; font-size: 0.7rem; margin-top: 0.4rem; color: var(--ink-light); }
+  .up{color:var(--signal-green)} .down{color:var(--signal-red)} .flat{color:var(--ink-faint)}
+
+  /* ── SECTION HEADER ── */
+  .section-header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--ink); }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .section-meta { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+
+  /* ── CHARTS ── */
+  .chart-section { border-bottom: 1px solid var(--paper-rule); }
+  .chart-wrap { padding: 1.5rem 0 0.75rem; }
+  svg.chart { width: 100%; overflow: visible; }
+  .chart-legend { display: flex; gap: 1.5rem; padding: 0.25rem 0 0.75rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-light); }
+  .legend-swatch { width: 20px; height: 2px; flex-shrink: 0; }
+  .ls-blue  { background: var(--signal-blue); }
+  .ls-blue-d { background: repeating-linear-gradient(to right, rgba(26,74,122,0.35) 0, rgba(26,74,122,0.35) 4px, transparent 4px, transparent 8px); }
+  .ls-red   { background: var(--signal-red); }
+  .ls-amber { background: var(--signal-amber); }
+
+  /* ── COUNT-BAR SHARED ── */
+  .count-bar-section { border-bottom: 1px solid var(--paper-rule); }
+  .count-bar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .count-bar-panel { padding: 1.25rem 0; }
+  .count-bar-panel:first-child { border-right: 1px solid var(--paper-rule); padding-right: 2rem; }
+  .count-bar-panel:last-child { padding-left: 2rem; }
+  .panel-subtitle { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 1.1rem; }
+
+  /* Skill rows */
+  .skill-row { display: grid; grid-template-columns: 16px 1fr 68px; align-items: center; gap: 0.6rem; margin-bottom: 0.75rem; }
+  .skill-row:last-child { margin-bottom: 0; }
+  .skill-rank { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-faint); text-align: right; }
+  .skill-bar-area { display: flex; flex-direction: column; gap: 0.25rem; }
+  .skill-label { font-family: 'Lora', serif; font-size: 0.875rem; color: var(--ink-mid); line-height: 1.25; }
+  .bar-track { height: 4px; background: var(--paper-rule); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; }
+  .bar-fill.red  { background: var(--signal-red); }
+  .bar-fill.amber { background: var(--signal-amber); }
+  .bar-fill.blue { background: var(--signal-blue); }
+  .skill-count-col { text-align: right; }
+  .count-number { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; line-height: 1; }
+  .count-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-top: 1px; }
+  .dir-badge { font-family: 'DM Mono', monospace; font-size: 0.62rem; margin-top: 2px; }
+  .dir-up   { color: var(--signal-green); }
+  .dir-flat { color: var(--ink-faint); }
+  .dir-down { color: var(--signal-red); }
+  .dir-new  { color: var(--signal-blue); }
+
+  /* Company rows */
+  .co-row { display: grid; grid-template-columns: 22px 1fr 68px; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
+  .co-row:last-child { margin-bottom: 0; }
+  .co-rank { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-faint); text-align: right; }
+  .co-bar-area { display: flex; flex-direction: column; gap: 0.25rem; }
+  .co-name { font-family: 'Lora', serif; font-size: 0.875rem; color: var(--ink-mid); line-height: 1.25; }
+  .co-count-col { text-align: right; }
+
+  /* ── RAMP NOTICE ── */
+  .ramp-notice { display: flex; align-items: flex-start; gap: 1rem; padding: 1.1rem 1.25rem; background: var(--ramp-bg); border: 1px solid var(--ramp-border); border-left: 3px solid var(--signal-amber); margin: 0; }
+  .ramp-icon { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--signal-amber); flex-shrink: 0; margin-top: 1px; letter-spacing: 0.08em; }
+  .ramp-text { font-family: 'Lora', serif; font-size: 0.9rem; line-height: 1.7; color: var(--ink-mid); }
+  .ramp-text strong { font-weight: 600; font-style: normal; color: var(--ink); }
+  .ramp-progress { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.65rem; }
+  .ramp-bar-wrap { flex: 1; height: 5px; background: var(--paper-rule); border-radius: 3px; max-width: 200px; }
+  .ramp-bar { height: 100%; background: var(--signal-amber); border-radius: 3px; width: 37.5%; }
+  .ramp-bar-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--signal-amber); letter-spacing: 0.07em; }
+
+  /* ── DIGEST ── */
+  .digest-section { padding: 1.75rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .digest-label { font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.75rem; }
+  .digest-text { font-family: 'Lora', serif; font-size: 1rem; line-height: 1.85; color: var(--ink-mid); max-width: 74ch; }
+  .digest-text em { font-style: italic; color: var(--ink); }
+
+  /* ── HYPOTHESIS SCOREBOARD ── */
+  .hypothesis-section { padding: 2rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .hyp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--paper-rule); border: 1px solid var(--paper-rule); margin-top: 1.25rem; }
+  .hyp-card { background: var(--paper); display: flex; align-items: flex-start; gap: 1rem; padding: 1.25rem 1.5rem; }
+  .hyp-status-box { flex-shrink: 0; width: 56px; height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid currentColor; font-family: 'DM Mono', monospace; gap: 2px; }
+  .hyp-status-box.accumulating { color: var(--signal-amber); }
+  .hyp-status-box.insufficient { color: var(--ink-faint); }
+  .hyp-id { font-size: 0.62rem; letter-spacing: 0.08em; }
+  .hyp-icon { font-size: 1.15rem; line-height: 1; }
+  .hyp-title { font-family: 'Lora', serif; font-size: 0.9rem; font-style: italic; color: var(--ink-mid); line-height: 1.5; margin-bottom: 0.3rem; }
+  .hyp-sub { font-family: 'DM Mono', monospace; font-size: 0.63rem; letter-spacing: 0.04em; color: var(--ink-faint); text-transform: uppercase; line-height: 1.6; }
+  .hyp-note { font-family: 'Lora', serif; font-size: 0.8rem; font-style: italic; color: var(--signal-amber); margin-top: 0.3rem; line-height: 1.45; }
+
+  /* ── FOOTER ── */
+  .footer { border-top: 1px solid var(--paper-rule); padding: 2rem 0 3rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+  .footer-methodology { font-family: 'Lora', serif; font-size: 0.85rem; line-height: 1.75; color: var(--ink-light); font-style: italic; }
+  .footer-meta { text-align: right; }
+  .footer-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.4rem; }
+  .footer-cite { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-light); line-height: 1.7; }
+  .rule-thin { border: none; border-top: 1px solid var(--paper-rule); }
+
+  /* ── MOBILE ── */
+  @media (max-width: 640px) {
+    .page { padding: 0 1.25rem; }
+
+    .masthead-top { flex-direction: column; gap: 0.5rem; }
+    .masthead-bottom { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+
+    .hero-metrics { grid-template-columns: 1fr; }
+    .metric-cell { border-right: none !important; border-bottom: 1px solid var(--paper-rule); }
+    .metric-cell:nth-child(1) { padding: 1.25rem 0 !important; }
+    .metric-cell:nth-child(2) { padding: 1.25rem 0 !important; }
+    .metric-cell:nth-child(3) { padding: 1.25rem 0 !important; border-bottom: none; }
+
+    .section-header { flex-direction: column; gap: 0.3rem; }
+
+    .count-bar-grid { grid-template-columns: 1fr; }
+    .count-bar-panel:first-child { border-right: none; padding-right: 0; border-bottom: 1px solid var(--paper-rule); padding-bottom: 1.5rem; }
+    .count-bar-panel:last-child { padding-left: 0; }
+
+    .hyp-grid { grid-template-columns: 1fr; }
+    .hyp-card { padding: 1rem 1.1rem; }
+
+    .footer { grid-template-columns: 1fr; }
+    .footer-meta { text-align: left; }
+
+    .ramp-notice { flex-direction: column; gap: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══ MASTHEAD ═══ -->
+  <header class="masthead">
+    <h1 class="publication-name">The PM Adaptation Index</h1>
+    <p class="publication-sub">An empirical observatory tracking how AI is reshaping the product management profession</p>
+  </header>
+
+  <!-- ═══ THIS WEEK'S SIGNAL ═══ -->
+  <section class="digest-section">
+    <div class="digest-label">This week's signal &nbsp;·&nbsp; Week 6</div>
+    <p class="digest-text">Hiring volume held flat while AI requirements kept climbing — up 5.7 points since tracking began. Agentic and LLM skills are rising for a second consecutive week, signaling growing demand for infrastructure-level AI roles. Stripe, Salesforce, and Google lead AI PM demand with 37 combined openings in the past 7 days.</p>
+  </section>
+
+  <!-- ═══ HERO METRICS ═══ -->
+  <section class="hero-metrics">
+    <div class="metric-cell">
+      <div class="metric-label">PM openings in the US today</div>
+      <div class="metric-value">4,312</div>
+      <div class="metric-delta"><span class="flat">▸</span> −1.2% vs 7-day avg</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">New PM jobs posted today</div>
+      <div class="metric-value">186</div>
+      <div class="metric-delta"><span class="up">▲</span> +9% vs 7-day avg</div>
+    </div>
+    <div class="metric-cell" style="border-right:none;">
+      <div class="metric-label">Jobs requiring AI skills today</div>
+      <div class="metric-value ai-rate">34.1%</div>
+      <div class="metric-delta"><span class="up">▲</span> +1.4 pts vs 7-day avg</div>
+    </div>
+  </section>
+
+  <!-- ═══ VOLUME TREND ═══ -->
+  <section class="chart-section">
+    <div class="section-header">
+      <span class="section-title">I. PM Hiring Volume</span>
+      <span class="section-meta">Active US postings · Daily</span>
+    </div>
+    <div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 900 210" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="bG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a4a7a" stop-opacity="0.13"/>
+            <stop offset="100%" stop-color="#1a4a7a" stop-opacity="0.01"/>
+          </linearGradient>
+          <pattern id="rampH" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="#d4cab8" stroke-width="1.5" stroke-opacity="0.5"/>
+          </pattern>
+        </defs>
+        <line x1="0" y1="170" x2="900" y2="170" stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="120" x2="900" y2="120" stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="70"  x2="900" y2="70"  stroke="#d4cab8" stroke-width="0.5"/>
+        <text x="2" y="174" font-family="DM Mono,monospace" font-size="9" fill="#6b6560">3,000</text>
+        <text x="2" y="124" font-family="DM Mono,monospace" font-size="9" fill="#6b6560">4,000</text>
+        <text x="2" y="74"  font-family="DM Mono,monospace" font-size="9" fill="#6b6560">5,000</text>
+        <rect x="760" y="15" width="140" height="160" fill="url(#rampH)" opacity="0.35"/>
+        <path d="M40,128 C120,118 200,122 280,114 C360,108 440,108 520,104 C600,99 680,110 760,112 C800,113 830,116 860,118 L860,170 L40,170 Z" fill="url(#bG)"/>
+        <path d="M40,128 C120,118 200,122 280,114 C360,108 440,108 520,104 C600,99 680,110 760,112 C800,113 830,116 860,118" fill="none" stroke="#1a4a7a" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="M40,132 L120,118 L200,140 L280,112 L360,124 L440,108 L520,118 L600,126 L680,114 L760,122 L860,120" fill="none" stroke="#1a4a7a" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="4,3"/>
+        <circle cx="860" cy="118" r="5" fill="#1a4a7a"/>
+        <circle cx="860" cy="118" r="10" fill="#1a4a7a" fill-opacity="0.12">
+          <animate attributeName="r" values="7;12;7" dur="2.5s" repeatCount="indefinite"/>
+          <animate attributeName="fill-opacity" values="0.15;0.04;0.15" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="40"  y="192" font-family="DM Mono,monospace" font-size="8.5" fill="#6b6560" text-anchor="middle">Day 1</text>
+        <text x="220" y="192" font-family="DM Mono,monospace" font-size="8.5" fill="#6b6560" text-anchor="middle">Day 10</text>
+        <text x="440" y="192" font-family="DM Mono,monospace" font-size="8.5" fill="#6b6560" text-anchor="middle">Day 20</text>
+        <text x="650" y="192" font-family="DM Mono,monospace" font-size="8.5" fill="#6b6560" text-anchor="middle">Day 32</text>
+        <text x="860" y="192" font-family="DM Mono,monospace" font-size="8.5" fill="#1a4a7a" text-anchor="middle" font-weight="500">Day 42</text>
+      </svg>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-swatch ls-blue"></div> 7-day rolling average</div>
+        <div class="legend-item"><div class="legend-swatch ls-blue-d"></div> Daily count</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ AI PENETRATION RATE ═══ -->
+  <section class="chart-section">
+    <div class="section-header">
+      <span class="section-title">II. AI Requirement Rate</span>
+      <span class="section-meta">% of PM postings mentioning AI · 7-day rolling</span>
+    </div>
+    <div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 900 195" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="rG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#a06010" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#a06010" stop-opacity="0.01"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="165" x2="900" y2="165" stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="118" x2="900" y2="118" stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="71"  x2="900" y2="71"  stroke="#d4cab8" stroke-width="0.5"/>
+        <text x="2" y="169" font-family="DM Mono,monospace" font-size="9" fill="#6b6560">10%</text>
+        <text x="2" y="122" font-family="DM Mono,monospace" font-size="9" fill="#6b6560">25%</text>
+        <text x="2" y="75"  font-family="DM Mono,monospace" font-size="9" fill="#6b6560">40%</text>
+        <path d="M40,148 L120,145 L200,141 L280,136 L360,129 L440,124 L520,118 L600,112 L680,104 L760,96 L860,85 L860,165 L40,165 Z" fill="url(#rG)"/>
+        <path d="M40,148 L120,145 L200,141 L280,136 L360,129 L440,124 L520,118 L600,112 L680,104 L760,96 L860,85" fill="none" stroke="#a06010" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <line x1="0" y1="71" x2="900" y2="71" stroke="#a06010" stroke-width="0.7" stroke-dasharray="3,4" opacity="0.3"/>
+        <text x="820" y="67" font-family="DM Mono,monospace" font-size="7.5" fill="#a06010" opacity="0.5">40%</text>
+        <circle cx="40"  cy="148" r="3" fill="#a06010" fill-opacity="0.5"/>
+        <text x="40" y="140" font-family="DM Mono,monospace" font-size="8" fill="#a06010" text-anchor="middle">28.4%</text>
+        <circle cx="860" cy="85" r="5" fill="#a06010"/>
+        <circle cx="860" cy="85" r="10" fill="#a06010" fill-opacity="0.1">
+          <animate attributeName="r" values="7;12;7" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <text x="860" y="77" font-family="DM Mono,monospace" font-size="9" fill="#a06010" text-anchor="middle" font-weight="500">34.1%</text>
+        <text x="440" y="53" font-family="DM Mono,monospace" font-size="7.5" fill="#a06010" text-anchor="middle" opacity="0.45" letter-spacing="0.07em">+1.4 PTS ABOVE 7-DAY AVG →</text>
+        <text x="40"  y="183" font-family="DM Mono,monospace" font-size="8.5" fill="#6b6560" text-anchor="middle">Day 1</text>
+        <text x="860" y="183" font-family="DM Mono,monospace" font-size="8.5" fill="#a06010" text-anchor="middle" font-weight="500">Day 42</text>
+      </svg>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-swatch ls-amber"></div> AI requirement rate</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════
+       TOP 10 AI SKILLS  +  TOP 10 COMPANIES
+       Two count-bar panels side by side
+       ═══════════════════════════════════════════════════ -->
+  <section class="count-bar-section">
+    <div class="count-bar-grid">
+
+      <!-- ── LEFT: TOP 10 AI SKILLS ── -->
+      <div class="count-bar-panel">
+        <div class="section-header" style="padding-right:2rem;">
+          <span class="section-title">III. Top AI Skills</span>
+          <span class="section-meta">All open US postings · As of today</span>
+        </div>
+        <div style="padding-right:2rem; padding-top:1rem;">
+          <div class="panel-subtitle">1,472 open postings mention AI skills (34.1% of 4,312)</div>
+
+          <!-- Bar data: count / 61 * 100 = width% -->
+          <div class="skill-row">
+            <span class="skill-rank">1</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">LLM / large language model</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:100%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">61</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-up">▲ rising</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">2</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">AI product strategy</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:78.7%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">48</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">3</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">Agentic / AI agent</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:50.8%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">31</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-up">▲ rising</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">4</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">Prompt engineering</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:44.3%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">27</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">5</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">Generative AI / GenAI</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:36.1%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">22</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-down">▾ falling</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">6</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">AI evaluation / evals</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:29.5%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">18</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-up">▲ rising</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">7</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">Responsible AI / AI safety</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:24.6%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">15</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">8</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">RAG / retrieval augmented</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:19.7%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">12</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-up">▲ rising</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">9</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">AI platform / AI tooling</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:16.4%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">10</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="skill-row">
+            <span class="skill-rank">10</span>
+            <div class="skill-bar-area">
+              <span class="skill-label">Foundation model / multimodal</span>
+              <div class="bar-track"><div class="bar-fill amber" style="width:13.1%"></div></div>
+            </div>
+            <div class="skill-count-col">
+              <div class="count-number" style="color:var(--signal-amber);">8</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-new">★ new</div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /skills panel -->
+
+      <!-- ── RIGHT: TOP 10 COMPANIES ── -->
+      <div class="count-bar-panel">
+        <div class="section-header" style="padding-left:2rem;">
+          <span class="section-title">IV. Top Companies Hiring PMs with AI Skills</span>
+          <span class="section-meta">7-day rolling window · By job description</span>
+        </div>
+        <div style="padding-left:2rem; padding-top:1rem;">
+          <div class="panel-subtitle">PM postings mentioning AI skills · 7-day rolling window</div>
+
+          <!-- Bar data: count / 14 * 100 = width% -->
+          <div class="co-row">
+            <span class="co-rank">1</span>
+            <div class="co-bar-area">
+              <span class="co-name">Stripe</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:100%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">14</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-up">▲ +3</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">2</span>
+            <div class="co-bar-area">
+              <span class="co-name">Salesforce</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:85.7%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">12</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">3</span>
+            <div class="co-bar-area">
+              <span class="co-name">Google</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:78.6%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">11</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-new">★ new</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">4</span>
+            <div class="co-bar-area">
+              <span class="co-name">Microsoft</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:71.4%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">10</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">5</span>
+            <div class="co-bar-area">
+              <span class="co-name">OpenAI</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:64.3%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">9</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-up">▲ +2</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">6</span>
+            <div class="co-bar-area">
+              <span class="co-name">Anthropic</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:57.1%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">8</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-new">★ new</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">7</span>
+            <div class="co-bar-area">
+              <span class="co-name">JPMorgan Chase</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:50%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">7</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">8</span>
+            <div class="co-bar-area">
+              <span class="co-name">Amazon</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:50%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">7</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-down">▾ −2</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">9</span>
+            <div class="co-bar-area">
+              <span class="co-name">Databricks</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:42.9%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">6</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-new">★ new</div>
+            </div>
+          </div>
+
+          <div class="co-row">
+            <span class="co-rank">10</span>
+            <div class="co-bar-area">
+              <span class="co-name">Figma</span>
+              <div class="bar-track"><div class="bar-fill blue" style="width:35.7%"></div></div>
+            </div>
+            <div class="co-count-col">
+              <div class="count-number" style="color:var(--signal-blue);">5</div>
+              <div class="count-label">jobs</div>
+              <div class="dir-badge dir-flat">▸ flat</div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /companies panel -->
+
+    </div><!-- /count-bar-grid -->
+  </section>
+
+  <!-- ═══ HYPOTHESIS SCOREBOARD ═══ -->
+  <section class="hypothesis-section">
+    <div class="section-header">
+      <span class="section-title">Hypotheses Under Investigation</span>
+      <span class="section-meta">Status updates as data accumulates</span>
+    </div>
+    <div class="hyp-grid">
+      <div class="hyp-card">
+        <div class="hyp-status-box accumulating"><span class="hyp-id">H1</span><span class="hyp-icon">◔</span></div>
+        <div>
+          <div class="hyp-title">PM hiring is in structural decline during the tracking period</div>
+          <div class="hyp-sub">Accumulating &nbsp;·&nbsp; community prior: 61%</div>
+          <div class="hyp-note">Reformulated: original H1 required a 2021 pre-AI baseline unavailable at zero cost.</div>
+        </div>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-status-box accumulating"><span class="hyp-id">H2</span><span class="hyp-icon">◑</span></div>
+        <div>
+          <div class="hyp-title">AI requirements are growing faster than total PM posting volume</div>
+          <div class="hyp-sub">Early signal &nbsp;·&nbsp; Trending supported &nbsp;·&nbsp; Community prior: 74%</div>
+        </div>
+      </div>
+      <div class="hyp-card" style="opacity:0.4;">
+        <div class="hyp-status-box insufficient"><span class="hyp-id">H3</span><span class="hyp-icon">○</span></div>
+        <div>
+          <div class="hyp-title">New PM titles (AI PM, Agentic PM) are appearing and accelerating</div>
+          <div class="hyp-sub">Deferred &nbsp;·&nbsp; requires sustained title data</div>
+        </div>
+      </div>
+      <div class="hyp-card" style="opacity:0.4;">
+        <div class="hyp-status-box insufficient"><span class="hyp-id">H4</span><span class="hyp-icon">○</span></div>
+        <div>
+          <div class="hyp-title">Traditional PM skills declining as a share of job descriptions</div>
+          <div class="hyp-sub">Deferred &nbsp;·&nbsp; requires Requirements Trend module</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ RAMP NOTICE (moved to end, just before footer) ═══ -->
+  <div class="ramp-notice" style="margin: 0;">
+    <span class="ramp-icon">NOTE</span>
+    <div class="ramp-text">
+      <strong>Observatory opened 42 days ago.</strong> No pre-AI baseline is yet available — that comparison requires 12+ months of accumulated data.
+      <div class="ramp-progress">
+        <div class="ramp-bar-wrap"><div class="ramp-bar" style="width:37.5%"></div></div>
+        <span class="ramp-bar-label">42 days of data accumulated</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <hr class="rule-thin" style="margin-top:0;">
+  <footer class="footer">
+    <div class="footer-methodology">
+      <strong style="font-style:normal;font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-faint);">Methodology &amp; Limitations</strong><br><br>
+      US PM job postings, updated daily. AI detection uses keyword matching across 40 terms — passing mentions and requirements are both counted. Skill counts are today's openings; company counts are deduplicated 7-day postings. LinkedIn and internal career pages excluded. Tracks postings, not hires. Full methodology at pmadaptationindex.com/methodology.
+    </div>
+    <div class="footer-meta">
+      <div class="footer-label">Cite this data</div>
+      <div class="footer-cite">The PM Adaptation Index<br>Day 42 · May 17, 2026<br>pmadaptationindex.com<br><br><span style="color:var(--ink-faint);">Built by Helena · Updated daily</span></div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

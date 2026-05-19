@@ -1,0 +1,51 @@
+company,ats,slug,category
+Anthropic,greenhouse,anthropic,foundation_model
+Google DeepMind,greenhouse,deepmind,foundation_model
+xAI,greenhouse,xai,foundation_model
+Stability AI,greenhouse,stabilityai,foundation_model
+Inflection AI,greenhouse,inflectionai,foundation_model
+OpenAI,ashby,openai,foundation_model
+Cohere,ashby,cohere,foundation_model
+Perplexity,ashby,perplexity,foundation_model
+Liquid AI,ashby,liquid-ai,foundation_model
+Cursor,ashby,cursor,coding_tool
+Replit,ashby,replit,coding_tool
+Cognition (Devin),ashby,cognition,coding_tool
+Poolside,ashby,poolside,coding_tool
+Factory,ashby,factory,coding_tool
+Harvey,ashby,harvey,vertical_ai
+Glean,greenhouse,gleanwork,vertical_ai
+Abridge,ashby,abridge,vertical_ai
+Speak,ashby,speak,vertical_ai
+Writer,ashby,writer,vertical_ai
+Sierra,ashby,sierra,enterprise_agent
+Decagon,ashby,decagon,enterprise_agent
+Lovable,ashby,lovable,enterprise_agent
+ElevenLabs,ashby,elevenlabs,media_gen
+Suno,ashby,suno,media_gen
+Udio,greenhouse,udio,media_gen
+Pika,ashby,pika,media_gen
+Black Forest Labs,greenhouse,blackforestlabs,media_gen
+CoreWeave,greenhouse,coreweave,ai_infra
+Crusoe,ashby,crusoe,ai_infra
+Modal,ashby,modal,ai_infra
+Anyscale,ashby,anyscale,ai_infra
+Tenstorrent,greenhouse,tenstorrent,ai_infra
+Databricks,greenhouse,databricks,data_platform
+Scale AI,greenhouse,scaleai,data_platform
+You.com,greenhouse,youcom,consumer_ai
+Notion,ashby,notion,product_tool
+Linear,ashby,linear,product_tool
+Figma,greenhouse,figma,product_tool
+Airtable,greenhouse,airtable,product_tool
+Vercel,greenhouse,vercel,dev_tool
+Discord,greenhouse,discord,consumer
+Reddit,greenhouse,reddit,consumer
+Stripe,greenhouse,stripe,fintech
+Mercury,greenhouse,mercury,fintech
+Brex,greenhouse,brex,fintech
+Gusto,greenhouse,gusto,saas
+ZoomInfo,greenhouse,zoominfo,saas
+Cresta,greenhouse,cresta,vertical_ai
+MongoDB,greenhouse,mongodb,data_platform
+Elastic,greenhouse,elastic,data_platform

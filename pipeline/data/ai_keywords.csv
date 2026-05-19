@@ -1,0 +1,71 @@
+keyword,category,notes
+llm,tooling,Large language model
+llms,tooling,Plural form
+large language model,tooling,
+generative ai,strategy,
+gen ai,strategy,Short form
+gpt,tooling,OpenAI GPT models
+chatgpt,tooling,
+claude,tooling,Anthropic Claude
+gemini,tooling,Google Gemini
+copilot,tooling,GitHub/Microsoft Copilot
+ai product strategy,strategy,
+ai strategy,strategy,
+agentic,strategy,Agentic AI workflows
+agentic ai,strategy,
+ai agents,tooling,
+ai agent,tooling,
+rag,tooling,Retrieval-augmented generation
+retrieval augmented generation,tooling,
+prompt engineering,tooling,
+prompting,tooling,
+foundation model,tooling,
+foundation models,tooling,
+fine-tuning,tooling,
+fine tuning,tooling,
+ai evaluation,ops,
+evals,ops,AI evaluation shorthand
+ai evals,ops,
+responsible ai,ethics,
+ai ethics,ethics,
+ai safety,ethics,
+ai governance,ethics,
+ai platform,tooling,
+ai infrastructure,tooling,
+machine learning,tooling,
+ml,tooling,Machine learning (standalone)
+nlp,tooling,Natural language processing
+natural language processing,tooling,
+computer vision,tooling,
+multimodal,tooling,
+vector database,tooling,
+vector search,tooling,
+embeddings,tooling,Vector embeddings
+ai features,strategy,
+ai-powered,strategy,
+ai driven,strategy,
+ai-driven,strategy,
+ai enabled,strategy,
+ai-enabled,strategy,
+ai roadmap,strategy,
+ai product,strategy,
+ai tools,tooling,
+ai workflows,ops,
+ai automation,ops,
+intelligent automation,ops,
+conversational ai,tooling,
+chatbot,tooling,
+virtual assistant,tooling,
+speech recognition,tooling,
+text to speech,tooling,
+text-to-speech,tooling,
+image generation,tooling,
+diffusion model,tooling,
+stable diffusion,tooling,
+midjourney,tooling,
+dall-e,tooling,
+openai,tooling,OpenAI as a platform/tool
+anthropic,tooling,Anthropic as a platform/tool
+hugging face,tooling,
+langchain,tooling,
+llamaindex,tooling,
