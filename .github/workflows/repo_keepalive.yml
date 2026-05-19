@@ -1,0 +1,21 @@
+name: Repository Keep-Alive
+
+on:
+  schedule:
+    - cron: '0 10 1 * *'    # 1st of every month
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update last-active timestamp
+        run: |
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .last_active
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .last_active
+          git commit -m "chore: monthly keep-alive [skip ci]"
+          git push

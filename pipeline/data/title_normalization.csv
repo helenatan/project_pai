@@ -1,0 +1,24 @@
+pattern,normalized_title,seniority_level
+associate product manager,APM,junior
+junior product manager,APM,junior
+apm,APM,junior
+chief product officer,CPO,vp
+cpo,CPO,vp
+vp of product,VP,vp
+vice president of product,VP,vp
+vp product,VP,vp
+head of product,VP,vp
+director of product,Director,director
+director product,Director,director
+group product manager,Director,director
+gpm,Director,director
+staff product manager,Staff PM,staff
+principal product manager,Staff PM,staff
+senior product manager,Senior PM,senior
+sr. product manager,Senior PM,senior
+sr product manager,Senior PM,senior
+product manager iii,Senior PM,senior
+product manager,PM,mid
+ pm ,PM,mid
+product manager i,PM,mid
+product manager ii,PM,mid

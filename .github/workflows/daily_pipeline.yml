@@ -1,0 +1,114 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    - cron: '0 14 * * *'   # Daily 6am PT (14:00 UTC)
+  workflow_dispatch:         # allow manual trigger for testing
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Run fetcher (Adzuna + JSearch)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          JSEARCH_API_KEY: ${{ secrets.JSEARCH_API_KEY }}
+        run: python pipeline/scripts/fetch.py
+
+      - name: Run employer-board fetcher (Greenhouse + Ashby)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/fetch_employers.py
+
+      - name: Run enricher
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/enrich.py --version v1.0
+
+      - name: Run aggregator
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/aggregate.py
+
+      - name: Run digest (Saturdays only -- script self-guards)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+        run: python pipeline/scripts/digest.py
+
+      - name: Backup snapshots (Saturdays only)
+        if: ${{ github.event.schedule == '0 14 * * 6' || (github.event_name == 'workflow_dispatch') }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/backup.py
+        continue-on-error: true
+
+      - name: Upload backup artifact (snapshots + raw + enriched)
+        if: ${{ github.event.schedule == '0 14 * * 6' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pai-backup-${{ github.run_number }}
+          path: |
+            backup_snapshots.json
+            backup_raw.json
+            backup_enriched.json
+            backup_fetch_log.json
+          retention-days: 90
+
+      # First-of-month: commit snapshot dump to repo for permanent record
+      # (artifacts expire at 90 days; this is the durable copy)
+      - name: Commit monthly snapshot to repo
+        if: ${{ github.event.schedule == '0 14 * * 6' && github.event.schedule == '0 14 1 * *' }}
+        run: |
+          mkdir -p backups
+          cp backup_snapshots.json "backups/snapshots_$(date +%Y%m).json"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          git commit -m "chore: monthly snapshot archive [skip ci]" || echo "nothing to commit"
+          git push
+
+      - name: Alert on success
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.ALERT_EMAIL_USER }}
+          password: ${{ secrets.ALERT_EMAIL_PASS }}
+          to: polaristan@gmail.com
+          subject: "PM Adaptation Index: pipeline OK (${{ github.run_number }})"
+          body: "Daily pipeline completed. Snapshot written."
+
+      - name: Alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.ALERT_EMAIL_USER }}
+          password: ${{ secrets.ALERT_EMAIL_PASS }}
+          to: polaristan@gmail.com
+          subject: "ALERT: PM Adaptation Index pipeline FAILED"
+          body: "Daily pipeline failed. Check GitHub Actions logs immediately."

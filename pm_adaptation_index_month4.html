@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The PM Adaptation Index — Month 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:         #1a1814;
+    --ink-mid:     #3d3830;
+    --ink-light:   #6b6358;
+    --ink-faint:   #a09589;
+    --paper:       #f5f0e8;
+    --paper-dark:  #ede7d8;
+    --paper-rule:  #d4cab8;
+    --signal-red:  #c0392b;
+    --signal-blue: #1a4a7a;
+    --signal-amber:#c47d0e;
+    --signal-green:#2d6a4f;
+    --signal-teal: #1a6b6b;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body { background: var(--paper); color: var(--ink); font-family: 'Lora', Georgia, serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); opacity: 0.6; }
+  .page { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 0 2rem; }
+
+  /* MASTHEAD */
+  .masthead { border-bottom: 3px double var(--ink); padding: 2.5rem 0 1.5rem; }
+  .masthead-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem; }
+  .issue-meta { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-light); }
+  .publication-name { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+  .publication-sub { font-family: 'Lora', serif; font-size: 0.85rem; font-style: italic; color: var(--ink-light); margin-top: 0.4rem; }
+  .masthead-rule { border: none; border-top: 1px solid var(--ink); margin: 1rem 0 0.5rem; }
+  .masthead-bottom { display: flex; justify-content: space-between; align-items: center; }
+  .narrative-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.75rem; border: 1px solid var(--signal-green); color: var(--signal-green); background: rgba(45,106,79,0.07); }
+  .narrative-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal-green); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .subscribe-link { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); text-decoration: none; border-bottom: 1px solid var(--paper-rule); padding-bottom: 1px; }
+
+  /* DIGEST */
+  .digest-section { padding: 1.75rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .digest-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.75rem; }
+  .digest-text { font-family: 'Lora', serif; font-size: 0.98rem; line-height: 1.8; color: var(--ink-mid); max-width: 72ch; }
+  .digest-text em { font-style: italic; color: var(--ink); }
+
+  /* HERO METRICS — 5 across in month 4 */
+  .hero-metrics { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--paper-rule); }
+  .metric-cell { padding: 1.5rem 0; border-right: 1px solid var(--paper-rule); padding-right: 1.25rem; opacity: 0; animation: fadeUp 0.6s ease forwards; }
+  .metric-cell:nth-child(1) { animation-delay: 0.05s; }
+  .metric-cell:nth-child(2) { animation-delay: 0.12s; padding-left: 1.25rem; }
+  .metric-cell:nth-child(3) { animation-delay: 0.19s; padding-left: 1.25rem; }
+  .metric-cell:nth-child(4) { animation-delay: 0.26s; padding-left: 1.25rem; }
+  .metric-cell:nth-child(5) { animation-delay: 0.33s; border-right: none; padding-left: 1.25rem; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .metric-label { font-family: 'DM Mono', monospace; font-size: 0.57rem; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.45rem; }
+  .metric-value { font-family: 'Playfair Display', serif; font-size: clamp(1.5rem, 2.8vw, 2.2rem); font-weight: 600; line-height: 1; color: var(--ink); letter-spacing: -0.02em; }
+  .metric-value.ai-rate  { color: var(--signal-red); }
+  .metric-value.new-role { color: var(--signal-teal); }
+  .metric-delta { font-family: 'DM Mono', monospace; font-size: 0.62rem; margin-top: 0.35rem; color: var(--ink-light); }
+  .up { color: var(--signal-green); } .down { color: var(--signal-red); } .flat { color: var(--ink-faint); }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--ink); }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
+  .section-meta { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); }
+
+  /* CHARTS */
+  .chart-section { border-bottom: 1px solid var(--paper-rule); }
+  .chart-wrap { padding: 1.5rem 0 0.75rem; }
+  svg.chart { width: 100%; overflow: visible; }
+  .chart-legend { display: flex; gap: 1.5rem; padding: 0.25rem 0 1rem; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-light); }
+  .legend-swatch { width: 20px; height: 2px; flex-shrink: 0; }
+  .ls-blue  { background: var(--signal-blue); }
+  .ls-blue-d { background: repeating-linear-gradient(to right, rgba(26,74,122,0.35) 0, rgba(26,74,122,0.35) 4px, transparent 4px, transparent 8px); }
+  .ls-red   { background: var(--signal-red); }
+  .ls-teal  { background: var(--signal-teal); }
+  .ls-amber { background: var(--signal-amber); }
+
+  /* TWO-COLUMN LAYOUT */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--paper-rule); }
+  .col-left  { border-right: 1px solid var(--paper-rule); padding-right: 2rem; }
+  .col-right { padding-left: 2rem; }
+
+  /* SKILLS TREND */
+  .skills-list { padding: 1.25rem 0; }
+  .skill-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .skill-row:last-child { border-bottom: none; }
+  .skill-rank { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: var(--ink-faint); width: 18px; text-align: right; flex-shrink: 0; }
+  .skill-bar-wrap { flex: 1; height: 4px; background: var(--paper-rule); border-radius: 2px; overflow: hidden; }
+  .skill-bar { height: 100%; border-radius: 2px; }
+  .skill-bar.ai-skill   { background: var(--signal-red); }
+  .skill-bar.trad-skill { background: var(--signal-blue); }
+  .skill-name { font-family: 'Lora', serif; font-size: 0.8rem; color: var(--ink-mid); min-width: 130px; }
+  .skill-badge { font-family: 'DM Mono', monospace; font-size: 0.52rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 5px; border: 1px solid currentColor; flex-shrink: 0; }
+  .badge-rising   { color: var(--signal-green); }
+  .badge-new      { color: var(--signal-teal); }
+  .badge-falling  { color: var(--ink-faint); }
+  .skill-pct { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--ink-light); width: 38px; text-align: right; flex-shrink: 0; }
+
+  /* ROLE EMERGENCE */
+  .role-list { padding: 1.25rem 0; }
+  .role-row { display: flex; align-items: flex-start; gap: 0.85rem; padding: 0.85rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .role-row:last-child { border-bottom: none; }
+  .role-icon { flex-shrink: 0; width: 38px; height: 38px; border: 1px solid var(--signal-teal); display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--signal-teal); letter-spacing: 0.06em; }
+  .role-body { flex: 1; }
+  .role-name { font-family: 'Playfair Display', serif; font-size: 0.9rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+  .role-meta { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: var(--ink-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .role-sparkline { flex-shrink: 0; }
+
+  /* SECTOR CHART */
+  .sector-section { border-bottom: 1px solid var(--paper-rule); }
+  .sector-list { padding: 1.25rem 0; }
+  .sector-row { display: grid; grid-template-columns: 140px 1fr 60px 80px; align-items: center; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px dotted var(--paper-rule); }
+  .sector-row:last-child { border-bottom: none; }
+  .sector-name { font-family: 'Lora', serif; font-size: 0.82rem; color: var(--ink-mid); }
+  .sector-bar-wrap { height: 6px; background: var(--paper-rule); border-radius: 3px; overflow: hidden; }
+  .sector-bar { height: 100%; border-radius: 3px; background: var(--signal-blue); }
+  .sector-count { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--ink-light); text-align: right; }
+  .sector-ai-rate { font-family: 'DM Mono', monospace; font-size: 0.65rem; text-align: right; }
+  .sector-ai-rate.high { color: var(--signal-red); }
+  .sector-ai-rate.mid  { color: var(--signal-amber); }
+  .sector-ai-rate.low  { color: var(--ink-faint); }
+
+  /* HYPOTHESIS SCOREBOARD */
+  .hypothesis-section { padding: 2rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .hyp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--paper-rule); border: 1px solid var(--paper-rule); margin-top: 1.25rem; }
+  .hyp-card { background: var(--paper); display: flex; align-items: flex-start; gap: 1rem; padding: 1.25rem 1.25rem; }
+  .hyp-status-box { flex-shrink: 0; width: 54px; height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid currentColor; font-family: 'DM Mono', monospace; gap: 2px; }
+  .hyp-status-box.insufficient  { color: var(--ink-faint); }
+  .hyp-status-box.accumulating  { color: var(--signal-amber); }
+  .hyp-status-box.supported     { color: var(--signal-green); }
+  .hyp-status-box.not-supported { color: var(--signal-red); }
+  .hyp-id   { font-size: 0.52rem; letter-spacing: 0.08em; }
+  .hyp-icon { font-size: 1.15rem; line-height: 1; }
+  .hyp-title { font-family: 'Lora', serif; font-size: 0.8rem; font-style: italic; color: var(--ink-mid); line-height: 1.45; margin-bottom: 0.25rem; }
+  .hyp-sub { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.06em; color: var(--ink-faint); text-transform: uppercase; }
+
+  /* COMMUNITY SIGNAL */
+  .community-section { padding: 1.75rem 0; border-bottom: 1px solid var(--paper-rule); }
+  .community-prompt { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em; color: var(--signal-blue); background: rgba(26,74,122,0.06); border: 1px solid rgba(26,74,122,0.2); padding: 0.75rem 1rem; margin: 1rem 0; }
+  .signal-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--paper-rule); border: 1px solid var(--paper-rule); }
+  .signal-card { background: var(--paper); padding: 1rem 1.25rem; }
+  .signal-quote { font-family: 'Lora', serif; font-size: 0.82rem; font-style: italic; line-height: 1.6; color: var(--ink-mid); margin-bottom: 0.5rem; }
+  .signal-attr { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: var(--ink-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  /* FOOTER */
+  .footer { border-top: 1px solid var(--paper-rule); padding: 2rem 0 3rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+  .footer-methodology { font-family: 'Lora', serif; font-size: 0.78rem; line-height: 1.7; color: var(--ink-light); font-style: italic; }
+  .footer-meta { text-align: right; }
+  .footer-label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.4rem; }
+  .footer-cite { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--ink-light); line-height: 1.6; }
+  .rule-thin { border: none; border-top: 1px solid var(--paper-rule); }
+  .mt-label { font-family: 'DM Mono', monospace; font-size: 0.52rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); background: var(--paper-dark); padding: 0.2rem 0.5rem; border: 1px solid var(--paper-rule); display: inline-block; margin-left: 0.75rem; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="issue-meta">Vol. 1 &nbsp;·&nbsp; Week 18 &nbsp;·&nbsp; September 6, 2026</span>
+      <a href="#subscribe" class="subscribe-link">347 subscribers · Subscribe →</a>
+    </div>
+    <h1 class="publication-name">The PM Adaptation Index</h1>
+    <p class="publication-sub">An empirical observatory tracking how AI is reshaping the product management profession</p>
+    <hr class="masthead-rule">
+    <div class="masthead-bottom">
+      <div class="narrative-badge">
+        <span class="dot"></span>
+        Evidence favors Narrative B &nbsp;·&nbsp; Role transformation, not elimination
+      </div>
+      <span class="issue-meta">United States &nbsp;·&nbsp; 18 weeks of data &nbsp;·&nbsp; Updated every Saturday</span>
+    </div>
+  </header>
+
+  <!-- DIGEST -->
+  <section class="digest-section">
+    <div class="digest-label">This week's signal</div>
+    <p class="digest-text">
+      PM hiring picked up to <em>4,890 postings</em> this week, 11% above the 4-week average and the highest weekly count since January. The AI penetration rate reached <em>41.3%</em>, crossing the 40% threshold for the first time. More striking: AI PM job titles now represent <em>6.2% of all PM postings</em>, tripling since tracking began 18 weeks ago. H2 has moved from "accumulating" to <em>supported</em>. The data now carries a clear direction: AI is not reducing PM demand — it is bifurcating the profession into those who can work at the boundary of AI systems and those who cannot.
+    </p>
+  </section>
+
+  <!-- HERO METRICS — 5 across -->
+  <section class="hero-metrics">
+    <div class="metric-cell">
+      <div class="metric-label">PM postings this week</div>
+      <div class="metric-value">4,890</div>
+      <div class="metric-delta"><span class="up">▲</span> +11% vs 4-week avg</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">AI requirement rate</div>
+      <div class="metric-value ai-rate">41.3%</div>
+      <div class="metric-delta"><span class="up">▲</span> +12.9 pts since launch</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">4-week rolling avg</div>
+      <div class="metric-value">4,401</div>
+      <div class="metric-delta"><span class="up">▲</span> +0.5% vs prior month</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">AI-era PM titles</div>
+      <div class="metric-value new-role">6.2%</div>
+      <div class="metric-delta"><span class="up">▲</span> +3.8x since week 1</div>
+    </div>
+    <div class="metric-cell">
+      <div class="metric-label">Top hiring sector</div>
+      <div class="metric-value" style="font-size:1.5rem;">Fintech</div>
+      <div class="metric-delta"><span class="up">▲</span> 22% of all PM posts</div>
+    </div>
+  </section>
+
+  <!-- VOLUME TREND CHART -->
+  <section class="chart-section">
+    <div class="section-header">
+      <span class="section-title">I. PM Hiring Volume</span>
+      <span class="section-meta">Weekly postings · United States · 2021–2026</span>
+    </div>
+    <div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 900 225" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="bG2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a4a7a" stop-opacity="0.14"/>
+            <stop offset="100%" stop-color="#1a4a7a" stop-opacity="0.01"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="180" x2="900" y2="180" stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="130" x2="900" y2="130" stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="80"  x2="900" y2="80"  stroke="#d4cab8" stroke-width="0.5"/>
+        <line x1="0" y1="30"  x2="900" y2="30"  stroke="#d4cab8" stroke-width="0.5"/>
+        <text x="0" y="184" font-family="DM Mono,monospace" font-size="9" fill="#a09589">2,000</text>
+        <text x="0" y="134" font-family="DM Mono,monospace" font-size="9" fill="#a09589">3,500</text>
+        <text x="0" y="84"  font-family="DM Mono,monospace" font-size="9" fill="#a09589">5,000</text>
+        <text x="0" y="34"  font-family="DM Mono,monospace" font-size="9" fill="#a09589">6,500</text>
+        <!-- AI era line -->
+        <line x1="500" y1="18" x2="500" y2="185" stroke="#1a4a7a" stroke-width="1" stroke-dasharray="3,4" opacity="0.35"/>
+        <text x="504" y="26" font-family="DM Mono,monospace" font-size="8" fill="#1a4a7a" opacity="0.55" letter-spacing="0.06em">AI ERA BEGINS</text>
+        <!-- Raw weekly -->
+        <path d="M35,138 L65,120 L95,145 L125,110 L155,128 L185,115 L215,132 L245,102 L275,90 L305,107 L335,97 L365,80 L395,94 L425,74 L455,87 L485,67 L515,82 L545,92 L575,112 L605,127 L635,117 L665,132 L695,120 L725,115 L755,108 L785,118 L815,104 L845,88 L875,74"
+              fill="none" stroke="#1a4a7a" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="4,3"/>
+        <!-- Rolling avg area -->
+        <path d="M35,135 C90,122 140,130 190,120 C240,110 290,98 340,88 C390,80 440,76 490,74 C540,82 590,106 640,114 C690,120 740,116 790,112 C820,108 850,96 875,76 L875,185 L35,185 Z" fill="url(#bG2)"/>
+        <!-- Rolling avg line -->
+        <path d="M35,135 C90,122 140,130 190,120 C240,110 290,98 340,88 C390,80 440,76 490,74 C540,82 590,106 640,114 C690,120 740,116 790,112 C820,108 850,96 875,76"
+              fill="none" stroke="#1a4a7a" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="875" cy="76" r="4" fill="#1a4a7a"/>
+        <circle cx="875" cy="76" r="8" fill="#1a4a7a" fill-opacity="0.14"/>
+        <text x="35"  y="200" font-family="DM Mono,monospace" font-size="8.5" fill="#a09589" text-anchor="middle">2021</text>
+        <text x="215" y="200" font-family="DM Mono,monospace" font-size="8.5" fill="#a09589" text-anchor="middle">2022</text>
+        <text x="395" y="200" font-family="DM Mono,monospace" font-size="8.5" fill="#a09589" text-anchor="middle">2023</text>
+        <text x="570" y="200" font-family="DM Mono,monospace" font-size="8.5" fill="#a09589" text-anchor="middle">2024</text>
+        <text x="720" y="200" font-family="DM Mono,monospace" font-size="8.5" fill="#a09589" text-anchor="middle">2025</text>
+        <text x="875" y="200" font-family="DM Mono,monospace" font-size="8.5" fill="#1a4a7a" text-anchor="middle" font-weight="500">Now</text>
+        <line x1="35" y1="213" x2="496" y2="213" stroke="#a09589" stroke-width="0.8"/>
+        <line x1="35"  y1="209" x2="35"  y2="217" stroke="#a09589" stroke-width="0.8"/>
+        <line x1="496" y1="209" x2="496" y2="217" stroke="#a09589" stroke-width="0.8"/>
+        <text x="264" y="222" font-family="DM Mono,monospace" font-size="7.5" fill="#a09589" text-anchor="middle" letter-spacing="0.08em">PRE-AI BASELINE PERIOD</text>
+      </svg>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-swatch ls-blue"></div> 4-week rolling average</div>
+        <div class="legend-item"><div class="legend-swatch ls-blue-d"></div> Weekly raw count</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI SIGNAL + ROLE EMERGENCE side by side -->
+  <section style="border-bottom:1px solid var(--paper-rule);">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+
+      <!-- AI Signal -->
+      <div style="border-right:1px solid var(--paper-rule); padding-right:0;">
+        <div class="section-header" style="padding-right:1.5rem;">
+          <span class="section-title">II. AI Penetration Rate</span>
+          <span class="section-meta">18 weeks</span>
+        </div>
+        <div class="chart-wrap" style="padding-right:1.5rem;">
+          <svg class="chart" viewBox="0 0 440 180" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="rG2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#c0392b" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#c0392b" stop-opacity="0.01"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="155" x2="440" y2="155" stroke="#d4cab8" stroke-width="0.5"/>
+            <line x1="0" y1="110" x2="440" y2="110" stroke="#d4cab8" stroke-width="0.5"/>
+            <line x1="0" y1="65"  x2="440" y2="65"  stroke="#d4cab8" stroke-width="0.5"/>
+            <line x1="0" y1="20"  x2="440" y2="20"  stroke="#d4cab8" stroke-width="0.5"/>
+            <text x="0" y="159" font-family="DM Mono,monospace" font-size="8" fill="#a09589">20%</text>
+            <text x="0" y="114" font-family="DM Mono,monospace" font-size="8" fill="#a09589">30%</text>
+            <text x="0" y="69"  font-family="DM Mono,monospace" font-size="8" fill="#a09589">40%</text>
+            <text x="0" y="24"  font-family="DM Mono,monospace" font-size="8" fill="#a09589">50%</text>
+            <path d="M25,148 L55,145 L85,140 L115,135 L145,128 L175,122 L205,116 L235,110 L265,102 L295,95 L325,88 L355,80 L385,72 L415,62 L440,55 L440,155 L25,155 Z" fill="url(#rG2)"/>
+            <path d="M25,148 L55,145 L85,140 L115,135 L145,128 L175,122 L205,116 L235,110 L265,102 L295,95 L325,88 L355,80 L385,72 L415,62 L440,55"
+                  fill="none" stroke="#c0392b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <!-- 40% threshold line -->
+            <line x1="0" y1="65" x2="440" y2="65" stroke="#c0392b" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.4"/>
+            <text x="330" y="61" font-family="DM Mono,monospace" font-size="7.5" fill="#c0392b" opacity="0.6">40% threshold</text>
+            <circle cx="440" cy="55" r="4" fill="#c0392b"/>
+            <circle cx="440" cy="55" r="8" fill="#c0392b" fill-opacity="0.12"/>
+            <text x="25" y="144" font-family="DM Mono,monospace" font-size="8" fill="#c0392b" text-anchor="middle">28.4%</text>
+            <text x="440" y="47" font-family="DM Mono,monospace" font-size="8.5" fill="#c0392b" text-anchor="middle" font-weight="500">41.3%</text>
+            <text x="25"  y="172" font-family="DM Mono,monospace" font-size="7.5" fill="#a09589" text-anchor="middle">Wk 1</text>
+            <text x="220" y="172" font-family="DM Mono,monospace" font-size="7.5" fill="#a09589" text-anchor="middle">Wk 9</text>
+            <text x="440" y="172" font-family="DM Mono,monospace" font-size="7.5" fill="#c0392b" text-anchor="middle" font-weight="500">Wk 18</text>
+          </svg>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-swatch ls-red"></div> AI requirement rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Role Emergence -->
+      <div style="padding-left:2rem;">
+        <div class="section-header">
+          <span class="section-title">III. AI-Era PM Titles <span class="mt-label">New · Month 4</span></span>
+          <span class="section-meta">Title emergence tracker</span>
+        </div>
+        <div class="role-list">
+          <div class="role-row">
+            <div class="role-icon">AI PM</div>
+            <div class="role-body">
+              <div class="role-name">AI Product Manager</div>
+              <div class="role-meta">First detected: Week 2 &nbsp;·&nbsp; 186 postings this week &nbsp;·&nbsp; ▲ 3.1x since Wk 1</div>
+            </div>
+            <svg class="role-sparkline" viewBox="0 0 60 24" width="60" height="24">
+              <polyline points="0,20 10,18 20,15 30,12 40,8 50,5 60,2" fill="none" stroke="#1a6b6b" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="role-row">
+            <div class="role-icon" style="font-size:0.5rem;">AGENT</div>
+            <div class="role-body">
+              <div class="role-name">Agentic Product Manager</div>
+              <div class="role-meta">First detected: Week 5 &nbsp;·&nbsp; 94 postings this week &nbsp;·&nbsp; ▲ rapidly growing</div>
+            </div>
+            <svg class="role-sparkline" viewBox="0 0 60 24" width="60" height="24">
+              <polyline points="0,22 10,21 20,19 30,16 40,11 50,7 60,3" fill="none" stroke="#1a6b6b" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="role-row">
+            <div class="role-icon" style="font-size:0.5rem;">LLM</div>
+            <div class="role-body">
+              <div class="role-name">LLM Product Manager</div>
+              <div class="role-meta">First detected: Week 8 &nbsp;·&nbsp; 61 postings this week &nbsp;·&nbsp; ▲ new and accelerating</div>
+            </div>
+            <svg class="role-sparkline" viewBox="0 0 60 24" width="60" height="24">
+              <polyline points="0,23 10,23 20,22 30,20 40,15 50,10 60,5" fill="none" stroke="#1a6b6b" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="role-row">
+            <div class="role-icon" style="font-size:0.5rem;">SAFE</div>
+            <div class="role-body">
+              <div class="role-name">AI Safety PM</div>
+              <div class="role-meta">First detected: Week 11 &nbsp;·&nbsp; 28 postings this week &nbsp;·&nbsp; ▲ emerging</div>
+            </div>
+            <svg class="role-sparkline" viewBox="0 0 60 24" width="60" height="24">
+              <polyline points="0,23 10,23 20,23 30,22 40,20 50,16 60,10" fill="none" stroke="#1a6b6b" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SKILLS + SECTOR side by side -->
+  <section style="border-bottom:1px solid var(--paper-rule);">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+
+      <!-- Skills Trend -->
+      <div style="border-right:1px solid var(--paper-rule); padding-right:2rem;">
+        <div class="section-header">
+          <span class="section-title">IV. Requirements Trend <span class="mt-label">New · Month 4</span></span>
+          <span class="section-meta">Top skills · 18-week window</span>
+        </div>
+        <div class="skills-list">
+          <div class="skill-row">
+            <span class="skill-rank">1</span>
+            <span class="skill-name" style="color:var(--signal-red);">AI product strategy</span>
+            <div class="skill-bar-wrap"><div class="skill-bar ai-skill" style="width:88%"></div></div>
+            <span class="skill-badge badge-rising">▲ rising</span>
+            <span class="skill-pct">88%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">2</span>
+            <span class="skill-name">Stakeholder mgmt</span>
+            <div class="skill-bar-wrap"><div class="skill-bar trad-skill" style="width:84%"></div></div>
+            <span class="skill-badge badge-falling" style="color:var(--ink-faint);">▸ flat</span>
+            <span class="skill-pct">84%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">3</span>
+            <span class="skill-name" style="color:var(--signal-red);">LLM / GenAI fluency</span>
+            <div class="skill-bar-wrap"><div class="skill-bar ai-skill" style="width:71%"></div></div>
+            <span class="skill-badge badge-rising">▲ rising</span>
+            <span class="skill-pct">71%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">4</span>
+            <span class="skill-name">Cross-functional lead</span>
+            <div class="skill-bar-wrap"><div class="skill-bar trad-skill" style="width:68%"></div></div>
+            <span class="skill-badge badge-falling" style="color:var(--ink-faint);">▾ −4pts</span>
+            <span class="skill-pct">68%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">5</span>
+            <span class="skill-name" style="color:var(--signal-red);">Prompt engineering</span>
+            <div class="skill-bar-wrap"><div class="skill-bar ai-skill" style="width:54%"></div></div>
+            <span class="skill-badge badge-new" style="color:var(--signal-teal);">★ new</span>
+            <span class="skill-pct">54%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">6</span>
+            <span class="skill-name">SQL / data analysis</span>
+            <div class="skill-bar-wrap"><div class="skill-bar trad-skill" style="width:51%"></div></div>
+            <span class="skill-badge badge-falling" style="color:var(--ink-faint);">▾ −8pts</span>
+            <span class="skill-pct">51%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">7</span>
+            <span class="skill-name" style="color:var(--signal-red);">AI evaluation / evals</span>
+            <div class="skill-bar-wrap"><div class="skill-bar ai-skill" style="width:44%"></div></div>
+            <span class="skill-badge badge-new" style="color:var(--signal-teal);">★ new</span>
+            <span class="skill-pct">44%</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-rank">8</span>
+            <span class="skill-name">OKRs / roadmapping</span>
+            <div class="skill-bar-wrap"><div class="skill-bar trad-skill" style="width:42%"></div></div>
+            <span class="skill-badge badge-falling" style="color:var(--ink-faint);">▾ −11pts</span>
+            <span class="skill-pct">42%</span>
+          </div>
+        </div>
+        <div style="padding:0.5rem 0 1rem; font-family:'DM Mono',monospace; font-size:0.6rem; color:var(--signal-red); letter-spacing:0.06em;">
+          ● AI-era skill &nbsp;&nbsp; <span style="color:var(--signal-blue);">●</span> Traditional PM skill
+        </div>
+      </div>
+
+      <!-- Sector Breakdown -->
+      <div style="padding-left:2rem;">
+        <div class="section-header">
+          <span class="section-title">V. Sector Distribution <span class="mt-label">New · Month 5</span></span>
+          <span class="section-meta">PM postings + AI rate by industry</span>
+        </div>
+        <div class="sector-list">
+          <div style="display:grid; grid-template-columns:140px 1fr 60px 80px; padding:0.4rem 0; margin-bottom:0.25rem;">
+            <span style="font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint);">Sector</span>
+            <span></span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;">Postings</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-faint);text-align:right;">AI rate</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">Technology / SaaS</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:100%"></div></div>
+            <span class="sector-count">1,812</span>
+            <span class="sector-ai-rate high">53.2%</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">Finance</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:58%; background:var(--signal-blue);opacity:0.7;"></div></div>
+            <span class="sector-count">1,076</span>
+            <span class="sector-ai-rate high">47.1%</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">Healthcare</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:34%; background:var(--signal-blue);opacity:0.55;"></div></div>
+            <span class="sector-count">628</span>
+            <span class="sector-ai-rate mid">31.4%</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">E-Commerce</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:28%; background:var(--signal-blue);opacity:0.5;"></div></div>
+            <span class="sector-count">519</span>
+            <span class="sector-ai-rate mid">38.8%</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">Media / Entertainment</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:19%; background:var(--signal-blue);opacity:0.45;"></div></div>
+            <span class="sector-count">352</span>
+            <span class="sector-ai-rate mid">29.6%</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">Hardware</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:14%; background:var(--signal-blue);opacity:0.4;"></div></div>
+            <span class="sector-count">261</span>
+            <span class="sector-ai-rate mid">24.3%</span>
+          </div>
+          <div class="sector-row">
+            <span class="sector-name">Government / Public</span>
+            <div class="sector-bar-wrap"><div class="sector-bar" style="width:8%; background:var(--signal-blue);opacity:0.3;"></div></div>
+            <span class="sector-count">148</span>
+            <span class="sector-ai-rate low">12.1%</span>
+          </div>
+        </div>
+        <div style="padding:0.5rem 0 1rem; font-family:'DM Mono',monospace; font-size:0.58rem; color:var(--ink-faint); letter-spacing:0.06em; line-height:1.6;">
+          AI rate = % of sector's PM postings mentioning AI requirements
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- HYPOTHESIS SCOREBOARD -->
+  <section class="hypothesis-section">
+    <div class="section-header">
+      <span class="section-title">Hypothesis Scoreboard</span>
+      <span class="section-meta">18 weeks of data · Last updated Sep 6, 2026</span>
+    </div>
+    <div class="hyp-grid">
+      <div class="hyp-card">
+        <div class="hyp-status-box not-supported">
+          <span class="hyp-id">H1</span>
+          <span class="hyp-icon">✕</span>
+        </div>
+        <div>
+          <div class="hyp-title">PM hiring has declined since the AI wave began</div>
+          <div class="hyp-sub">Not supported · Total volume up 8% vs 2021 baseline · community prior: 61%</div>
+        </div>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-status-box supported">
+          <span class="hyp-id">H2</span>
+          <span class="hyp-icon">✓</span>
+        </div>
+        <div>
+          <div class="hyp-title">AI requirements growing faster than total PM posting volume</div>
+          <div class="hyp-sub">Supported · AI rate +12.9pts while volume +8% · community prior: 74%</div>
+        </div>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-status-box accumulating">
+          <span class="hyp-id">H3</span>
+          <span class="hyp-icon">◑</span>
+        </div>
+        <div>
+          <div class="hyp-title">New PM titles (AI PM, Agentic PM) are appearing and accelerating</div>
+          <div class="hyp-sub">Accumulating · 4 new title categories detected · trending toward supported</div>
+        </div>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-status-box accumulating">
+          <span class="hyp-id">H4</span>
+          <span class="hyp-icon">◔</span>
+        </div>
+        <div>
+          <div class="hyp-title">Traditional PM skills declining as share of job descriptions</div>
+          <div class="hyp-sub">Early signal · OKRs −11pts, SQL −8pts but stakeholder mgmt flat · 4 of 8 weeks</div>
+        </div>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-status-box accumulating">
+          <span class="hyp-id">H5</span>
+          <span class="hyp-icon">◑</span>
+        </div>
+        <div>
+          <div class="hyp-title">AI-native sectors require AI skills earlier than legacy sectors</div>
+          <div class="hyp-sub">Trending supported · Tech 53% vs Gov 12% · confirms sector divergence</div>
+        </div>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-status-box insufficient">
+          <span class="hyp-id">H6</span>
+          <span class="hyp-icon">○</span>
+        </div>
+        <div>
+          <div class="hyp-title">Surviving PM roles require human judgment at the AI boundary</div>
+          <div class="hyp-sub">Insufficient data · requires 6+ months requirements trend + role data</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMUNITY SIGNAL -->
+  <section class="community-section">
+    <div class="section-header">
+      <span class="section-title">Community Signal</span>
+      <span class="section-meta">What the data cannot capture · 23 responses this week</span>
+    </div>
+    <div class="community-prompt">
+      This week's prompt: "H2 is now marked Supported — AI requirements are growing faster than volume. Does this match your experience in the hiring market right now? What are interviewers actually asking?"
+    </div>
+    <div class="signal-cards">
+      <div class="signal-card">
+        <div class="signal-quote">"Every single PM interview I've had in the last 6 weeks has had an AI product strategy question. Six months ago, maybe one in three."</div>
+        <div class="signal-attr">Senior PM · Fintech · Job seeker</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-quote">"We're screening for AI literacy now before the hiring manager loop. Candidates who can't speak to LLM product tradeoffs don't make it through."</div>
+        <div class="signal-attr">Head of Product · Series B SaaS · Hiring manager</div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-quote">"The data is right but missing something: lots of these postings say AI required but the teams don't actually have AI roadmaps yet. It's performative."</div>
+        <div class="signal-attr">Group PM · Enterprise · Observing</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <hr class="rule-thin" style="margin-top:0;">
+  <footer class="footer">
+    <div class="footer-methodology">
+      <strong style="font-style:normal; font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:0.12em; text-transform:uppercase; color: var(--ink-faint);">Methodology &amp; Limitations</strong><br><br>
+      Data sourced from Adzuna and JSearch APIs. LinkedIn excluded — no public API. AI keyword detection uses a curated list of 40 terms updated quarterly; presence, not intent, is detected. Sector classification uses a manually curated company lookup table; multi-sector companies assigned to primary sector. This tracks postings, not hires. All limitations documented in full at pmadaptationindex.com/methodology.
+    </div>
+    <div class="footer-meta">
+      <div class="footer-label">Cite this data</div>
+      <div class="footer-cite">
+        The PM Adaptation Index<br>
+        Week of Sep 6, 2026<br>
+        pmadaptationindex.com<br><br>
+        <span style="color: var(--ink-faint);">347 subscribers · Built by Helena</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
