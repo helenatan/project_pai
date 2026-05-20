@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import Header from './components/Header'
+import RampNotice from './components/RampNotice'
 import Digest from './components/Digest'
 import HeroMetrics from './components/HeroMetrics'
 import VolumeChart from './components/VolumeChart'
 import AIPenetrationChart from './components/AIPenetrationChart'
 import SkillsPanel from './components/SkillsPanel'
 import CompaniesPanel from './components/CompaniesPanel'
-import RampNotice from './components/RampNotice'
 import Footer from './components/Footer'
 
 const COLUMNS = [
@@ -41,62 +41,50 @@ export default function App() {
       })
   }, [])
 
-  const today = snapshots?.at(-1)
-  const latestDigest = snapshots?.filter((s) => s.summary_text).at(-1)
-  const hasPartialData = today?.data_quality_status === 'partial'
-
-  const containerStyle = {
-    maxWidth: 860,
-    margin: '0 auto',
-    padding: '2rem 1.5rem',
-    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-    color: '#1a2a3a',
-  }
-
   if (error) {
     return (
-      <div style={containerStyle}>
+      <div className="page">
         <Header />
-        <p style={{ color: '#c0392b' }}>Failed to load data: {error}</p>
+        <p className="state-msg error">Failed to load data: {error}</p>
       </div>
     )
   }
 
   if (!snapshots) {
     return (
-      <div style={containerStyle}>
+      <div className="page">
         <Header />
-        <p style={{ color: '#6080a0' }}>Loading...</p>
+        <p className="state-msg">Loading…</p>
       </div>
     )
   }
 
+  if (!snapshots.length) {
+    return (
+      <div className="page">
+        <Header />
+        <p className="state-msg">No snapshots recorded yet.</p>
+      </div>
+    )
+  }
+
+  const today = snapshots.at(-1)
+  const latestDigest = snapshots.filter((s) => s.summary_text).at(-1)
+  const dayN = Math.floor(
+    (new Date(today.snapshot_date) - new Date(snapshots[0].snapshot_date)) / 86_400_000
+  ) + 1
+
   return (
-    <div style={containerStyle}>
-      <Header />
-      <RampNotice snapshots={snapshots} />
-      {hasPartialData && (
-        <div style={{
-          background: '#fff3f0',
-          border: '1px solid #f0a080',
-          borderRadius: 6,
-          padding: '0.5rem 0.9rem',
-          marginBottom: '1rem',
-          fontSize: '0.8rem',
-          color: '#7a3010',
-        }}>
-          Today's data may be incomplete. One or more sources encountered issues.
-        </div>
-      )}
+    <div className="page">
+      <Header today={today} dayN={dayN} />
+      <RampNotice dayN={dayN} />
       <Digest snapshot={latestDigest} />
       <HeroMetrics snapshot={today} />
       <VolumeChart snapshots={snapshots} />
       <AIPenetrationChart snapshots={snapshots} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-        <SkillsPanel snapshot={today} />
-        <CompaniesPanel snapshot={today} />
-      </div>
-      <Footer snapshot={today} />
+      <SkillsPanel snapshot={today} />
+      <CompaniesPanel snapshot={today} />
+      <Footer snapshot={today} dayN={dayN} />
     </div>
   )
 }

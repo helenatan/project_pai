@@ -1,22 +1,23 @@
-export default function RampNotice({ snapshots }) {
-  if (!snapshots?.length) return null
+const BASELINE_TARGET = 112
 
-  const daysSinceLaunch = Math.floor(
-    (Date.now() - new Date(snapshots[0].snapshot_date)) / 86_400_000
-  ) + 1
+export default function RampNotice({ dayN }) {
+  if (dayN == null || dayN >= BASELINE_TARGET) return null
+
+  const pct = Math.min(100, Math.max(0.9, (dayN / BASELINE_TARGET) * 100))
 
   return (
-    <div style={{
-      background: '#fffbe6',
-      border: '1px solid #e8d870',
-      borderRadius: 6,
-      padding: '0.75rem 1rem',
-      marginBottom: '1.5rem',
-      fontSize: '0.82rem',
-      color: '#5a4a00',
-    }}>
-      <strong>Day {daysSinceLaunch} of data collection.</strong> Rolling averages and trend signals
-      strengthen over time. Directional signals before Day 14 should be interpreted cautiously.
+    <div className="ramp-notice">
+      <span className="ramp-icon">NOTE</span>
+      <div className="ramp-text">
+        <strong>Day {dayN} of data collection.</strong> Rolling averages, 7-day trends, and
+        directional signals require at least 7 days of data. Signals before Day 14 should be
+        interpreted cautiously — early trend comparisons may read as <em>new</em> with no prior
+        period to compare against.
+        <div className="ramp-progress">
+          <div className="ramp-bar-wrap"><div className="ramp-bar" style={{ width: `${pct}%` }} /></div>
+          <span className="ramp-bar-label">Day {dayN} of {BASELINE_TARGET} to full baseline</span>
+        </div>
+      </div>
     </div>
   )
 }
