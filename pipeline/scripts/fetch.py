@@ -79,9 +79,10 @@ def fetch_adzuna(supabase: Client, run_date: date) -> dict:
         "sort_by": "date",
     }
 
-    # Fetch total live count (page 1, results_per_page=1)
+    # Fetch total live count (page 1, results_per_page=1).
+    # Drop max_days_old so this counts ALL live PM postings, not just the last 24h.
     try:
-        count_params = {k: v for k, v in base_params.items() if k != "date_from"}
+        count_params = {k: v for k, v in base_params.items() if k != "max_days_old"}
         count_params["results_per_page"] = 1
         count_data = adzuna_request(session, "1", count_params)
         adzuna_total_count = count_data.get("count")
