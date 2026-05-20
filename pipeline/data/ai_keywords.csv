@@ -1,71 +1,57 @@
 keyword,category,notes
-llm,tooling,Large language model
-llms,tooling,Plural form
-large language model,tooling,
-generative ai,strategy,
-gen ai,strategy,Short form
-gpt,tooling,OpenAI GPT models
-chatgpt,tooling,
-claude,tooling,Anthropic Claude
-gemini,tooling,Google Gemini
-copilot,tooling,GitHub/Microsoft Copilot
-ai product strategy,strategy,
-ai strategy,strategy,
-agentic,strategy,Agentic AI workflows
-agentic ai,strategy,
-ai agents,tooling,
-ai agent,tooling,
-rag,tooling,Retrieval-augmented generation
-retrieval augmented generation,tooling,
-prompt engineering,tooling,
-prompting,tooling,
-foundation model,tooling,
-foundation models,tooling,
-fine-tuning,tooling,
-fine tuning,tooling,
-ai evaluation,ops,
-evals,ops,AI evaluation shorthand
-ai evals,ops,
-responsible ai,ethics,
-ai ethics,ethics,
-ai safety,ethics,
-ai governance,ethics,
-ai platform,tooling,
-ai infrastructure,tooling,
-machine learning,tooling,
-ml,tooling,Machine learning (standalone)
-nlp,tooling,Natural language processing
-natural language processing,tooling,
-computer vision,tooling,
-multimodal,tooling,
-vector database,tooling,
-vector search,tooling,
-embeddings,tooling,Vector embeddings
-ai features,strategy,
-ai-powered,strategy,
-ai driven,strategy,
-ai-driven,strategy,
-ai enabled,strategy,
-ai-enabled,strategy,
-ai roadmap,strategy,
-ai product,strategy,
-ai tools,tooling,
-ai workflows,ops,
-ai automation,ops,
-intelligent automation,ops,
-conversational ai,tooling,
-chatbot,tooling,
-virtual assistant,tooling,
-speech recognition,tooling,
-text to speech,tooling,
-text-to-speech,tooling,
-image generation,tooling,
-diffusion model,tooling,
-stable diffusion,tooling,
-midjourney,tooling,
-dall-e,tooling,
-openai,tooling,OpenAI as a platform/tool
-anthropic,tooling,Anthropic as a platform/tool
-hugging face,tooling,
-langchain,tooling,
-llamaindex,tooling,
+large language model,model_fluency,Core LLM concept
+llm,model_fluency,Shorthand for large language model
+generative ai,model_fluency,
+gen ai,model_fluency,Short form of generative AI
+foundation model,model_fluency,
+foundation models,model_fluency,Plural form
+multimodal,model_fluency,Multi-modal AI systems
+machine learning,model_fluency,PM-level ML fluency
+natural language processing,model_fluency,
+nlp,model_fluency,Shorthand for NLP
+computer vision,model_fluency,
+prompt engineering,ai_building,PMs write and test prompts to prototype
+context window,ai_building,Token context management — key design constraint
+retrieval augmented generation,ai_building,
+rag,ai_building,Shorthand for RAG
+fine-tuning,ai_building,Deciding when to fine-tune vs. prompt
+fine tuning,ai_building,Variant spelling
+embeddings,ai_building,Semantic search and similarity use cases
+vector database,ai_building,
+vector search,ai_building,
+conversational ai,ai_building,
+agentic,agentic_systems,AI that acts autonomously across multiple steps — the core paradigm shift from assistive to autonomous products
+agentic ai,agentic_systems,Variant of agentic; signals autonomous AI product design in the JD
+ai agent,agentic_systems,A model that takes actions and completes tasks independently — distinct from a chatbot or copilot
+ai agents,agentic_systems,Plural form; often signals a multi-step autonomous system architecture
+multi-agent,agentic_systems,Multiple specialized agents coordinating on a shared goal — a distinct PM design skill from single-agent work
+agentic workflows,agentic_systems,Designing pipelines where AI plans and executes multi-step tasks without per-step human approval
+agent orchestration,agentic_systems,Managing how agents hand off tasks and recover from failures — PM-level system design responsibility
+tool use,agentic_systems,Giving models access to external tools (search and code execution) — the foundational capability that makes agents useful
+ai evaluation,evals,
+ai evals,evals,
+model evaluation,evals,Evaluating model quality and fitness
+evaluation framework,evals,Common phrasing in LLM PM job descriptions
+hallucination,evals,Key AI failure mode PMs must understand and manage
+human in the loop,evals,Combining AI output with human judgment
+human-in-the-loop,evals,Variant spelling
+ai product metrics,evals,Defining and tracking AI-specific product quality
+responsible ai,ai_safety,
+ai safety,ai_safety,
+ai governance,ai_safety,
+ai ethics,ai_safety,
+trust and safety,ai_safety,Growing PM specialty at AI companies
+red teaming,ai_safety,Adversarial testing of AI systems
+ai bias,ai_safety,Detecting and mitigating bias in AI outputs
+guardrails,ai_safety,Safety constraints and output filtering for AI
+ai product strategy,ai_product_vision,
+ai strategy,ai_product_vision,
+ai roadmap,ai_product_vision,Planning and sequencing AI features
+ai platform,ai_deployment,
+ai infrastructure,ai_deployment,
+mlops,ai_deployment,Operational practices for ML systems
+ml ops,ai_deployment,Variant spacing
+llmops,ai_deployment,Operational practices specific to LLM products
+ai workflows,ai_deployment,
+ai automation,ai_deployment,
+intelligent automation,ai_deployment,
