@@ -1,12 +1,31 @@
-export default function Header() {
+function fmtDate(d) {
+  if (!d) return ''
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  })
+}
+
+export default function Header({ today, dayN }) {
   return (
-    <header style={{ marginBottom: '2rem' }}>
-      <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#1a2a3a', margin: 0 }}>
-        PM Adaptation Index
-      </h1>
-      <p style={{ color: '#4a6080', marginTop: '0.4rem', fontSize: '1rem' }}>
-        An empirical observatory tracking how AI is reshaping the product management profession.
+    <header className="masthead">
+      <div className="masthead-top">
+        <span className="issue-meta">
+          Vol. 1 &nbsp;·&nbsp; Day {dayN ?? '—'} &nbsp;·&nbsp; {fmtDate(today?.snapshot_date)}
+        </span>
+        <span className="issue-meta">United States &nbsp;·&nbsp; Updated daily at 6 am PT</span>
+      </div>
+      <h1 className="publication-name">The PM Adaptation Index</h1>
+      <p className="publication-sub">
+        An empirical observatory tracking how AI is reshaping the product management profession
       </p>
+      <hr className="masthead-rule" />
+      <div className="masthead-bottom">
+        <div className="narrative-badge">
+          <span className="dot" />
+          Day {dayN ?? '—'} of continuous tracking
+        </div>
+        <span className="issue-meta">Data quality: {today?.data_quality_status || 'unknown'}</span>
+      </div>
     </header>
   )
 }
