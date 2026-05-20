@@ -50,6 +50,20 @@ def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 
+def fetch_all_rows(build_query, page_size: int = 1000) -> list[dict]:
+    """Page through a PostgREST query so results are not silently capped at
+    1000 rows. build_query must return a fresh query builder on each call."""
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        page = build_query().range(offset, offset + page_size - 1).execute().data
+        rows.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+    return rows
+
+
 def normalize_title(raw_title: str) -> tuple[str, str]:
     """Return (normalized_title, seniority_level)."""
     if not raw_title:
@@ -102,15 +116,15 @@ def match_keywords(description_text: str, keywords: list[str]) -> tuple[bool, li
 
 def fetch_unprocessed(supabase: Client, version: str, since: Optional[str]) -> list[dict]:
     """Return raw records that have no enriched row for this version."""
-    query = (
-        supabase.table("job_postings_raw")
-        .select("id, title, company, description_text, posted_date")
-    )
-    if since:
-        query = query.gte("posted_date", since)
+    def _raw_query():
+        q = supabase.table("job_postings_raw").select(
+            "id, title, company, description_text, posted_date"
+        )
+        if since:
+            q = q.gte("posted_date", since)
+        return q.order("id")
 
-    raw_resp = query.execute()
-    raw_rows = raw_resp.data
+    raw_rows = fetch_all_rows(_raw_query)
 
     if not raw_rows:
         return []
@@ -136,13 +150,15 @@ def fetch_unprocessed(supabase: Client, version: str, since: Optional[str]) -> l
 
 def fetch_all_for_version(supabase: Client, version: str, since: Optional[str]) -> list[dict]:
     """Return all raw records within date range (for --force-reprocess)."""
-    query = (
-        supabase.table("job_postings_raw")
-        .select("id, title, company, description_text, posted_date")
-    )
-    if since:
-        query = query.gte("posted_date", since)
-    return query.execute().data
+    def _raw_query():
+        q = supabase.table("job_postings_raw").select(
+            "id, title, company, description_text, posted_date"
+        )
+        if since:
+            q = q.gte("posted_date", since)
+        return q.order("id")
+
+    return fetch_all_rows(_raw_query)
 
 
 def enrich_record(raw: dict, keywords: list[str], version: str) -> dict:
