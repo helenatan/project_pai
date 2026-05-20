@@ -336,14 +336,14 @@ def main():
     total_postings_raw = len(all_raw_ids_today)
 
     if all_raw_ids_today:
-        all_enriched_today = (
-            supabase.table("job_postings_enriched")
-            .select("dedup_hash")
-            .eq("pipeline_version", PIPELINE_VERSION)
-            .in_("raw_id", all_raw_ids_today)
-            .execute()
+        all_enriched_today = _batched_in(
+            supabase,
+            "job_postings_enriched",
+            "dedup_hash",
+            all_raw_ids_today,
+            extra_eq=(("pipeline_version", PIPELINE_VERSION),),
         )
-        hashes_today = {r["dedup_hash"] for r in all_enriched_today.data if r.get("dedup_hash")}
+        hashes_today = {r["dedup_hash"] for r in all_enriched_today if r.get("dedup_hash")}
         distinct_today = len(hashes_today)
     else:
         distinct_today = 0
