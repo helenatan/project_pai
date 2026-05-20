@@ -10,12 +10,12 @@ function fmtDate(dateStr) {
 
 function AITooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
-  const ratePt  = payload.find((p) => p.dataKey === 'AI requirement rate')
-  const avgPt   = payload.find((p) => p.dataKey === '7-day rolling average')
-  const rate    = ratePt?.value
-  const aiCount = ratePt?.payload?.aiPostingsCount
-  const total   = rate != null && aiCount != null && rate > 0
-    ? Math.round(aiCount / (rate / 100))
+  const ratePt       = payload.find((p) => p.dataKey === 'AI requirement rate')
+  const avgPt        = payload.find((p) => p.dataKey === '7-day rolling average')
+  const rate         = ratePt?.value
+  const activeTotal  = ratePt?.payload?.totalPostings
+  const impliedCount = rate != null && activeTotal != null
+    ? Math.round(rate / 100 * activeTotal)
     : null
 
   return (
@@ -27,10 +27,10 @@ function AITooltip({ active, payload, label }) {
       <div style={{ fontWeight: 600, color: '#1a1714', marginBottom: '0.1rem' }}>{label}</div>
       {rate != null && (
         <div style={{ color: '#a06010' }}>
-          {parseFloat(rate).toFixed(1)}% of new postings mention AI
-          {total != null && (
+          {parseFloat(rate).toFixed(1)}% AI requirement rate
+          {impliedCount != null && (
             <span style={{ color: '#6b6560', marginLeft: '0.35rem' }}>
-              ({aiCount} of {total} analyzed)
+              (~{impliedCount.toLocaleString()} of {activeTotal.toLocaleString()} active openings)
             </span>
           )}
         </div>
@@ -55,7 +55,7 @@ export default function AIPenetrationChart({ snapshots }) {
     '7-day rolling average': s.ai_penetration_7day_avg != null
       ? parseFloat(parseFloat(s.ai_penetration_7day_avg).toFixed(1))
       : null,
-    aiPostingsCount: s.top_ai_skills?.total_ai_postings_today ?? null,
+    totalPostings: s.total_postings ?? null,
   }))
 
   const enoughData = snapshots.filter((s) => s.ai_penetration_rate != null).length >= 2
@@ -64,7 +64,7 @@ export default function AIPenetrationChart({ snapshots }) {
     <section>
       <div className="section-header">
         <span className="section-title">II. AI Requirement Rate</span>
-        <span className="section-meta">% of new postings analyzed (full-text sources) · Daily</span>
+        <span className="section-meta">% of active PM openings estimated to require AI · Daily</span>
       </div>
       {enoughData ? (
         <div className="chart-wrap">
