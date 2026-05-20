@@ -171,7 +171,7 @@ body::before {
 .co-row:last-child { margin-bottom: 0; }
 .co-rank { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-faint); text-align: right; }
 .co-bar-area { display: flex; flex-direction: column; gap: 0.25rem; }
-.co-name { font-family: 'Lora', serif; font-size: 0.875rem; color: var(--ink-mid); line-height: 1.25; text-transform: capitalize; }
+.co-name { font-family: 'Lora', serif; font-size: 0.875rem; color: var(--ink-mid); line-height: 1.25; }
 .co-count-col { text-align: right; }
 .co-list { padding-top: 1rem; max-width: 480px; }
 
