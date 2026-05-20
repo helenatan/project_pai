@@ -308,21 +308,20 @@ def main():
     # Prior:  [target_date - 13, target_date - 6) = preceding 7-day window.
     # Idempotent for reprocessing because we never reference future dates.
     seven_day_start = target_date - timedelta(days=6)
-    seven_day_ai = [
-        r for r in fetch_enriched_full_text_range(supabase, seven_day_start, target_date + timedelta(days=1))
-        if r.get("has_ai_requirement")
-    ]
+    seven_day_records = fetch_enriched_full_text_range(supabase, seven_day_start, target_date + timedelta(days=1))
+    seven_day_ai = [r for r in seven_day_records if r.get("has_ai_requirement")]
 
     prior_window_start = target_date - timedelta(days=13)
     prior_window_end = target_date - timedelta(days=6)
-    prior_window_ai = [
-        r for r in fetch_enriched_full_text_range(supabase, prior_window_start, prior_window_end)
-        if r.get("has_ai_requirement")
-    ]
+    prior_window_records = fetch_enriched_full_text_range(supabase, prior_window_start, prior_window_end)
+    prior_window_ai = [r for r in prior_window_records if r.get("has_ai_requirement")]
 
-    current = count_companies(seven_day_ai)
-    prior = count_companies(prior_window_ai)
-    top_10_companies = sorted(current.items(), key=lambda x: x[1], reverse=True)[:10]
+    current_total = count_companies(seven_day_records)
+    current_ai = count_companies(seven_day_ai)
+    prior_total = count_companies(prior_window_records)
+    prior_ai = count_companies(prior_window_ai)
+    # Rank by total PM openings; AI-requiring subset shown as share within bar.
+    top_10_companies = sorted(current_total.items(), key=lambda x: x[1], reverse=True)[:10]
 
     top_employers_ai_skills = {
         "window_days": 7,
@@ -331,11 +330,15 @@ def main():
             {
                 "rank": i + 1,
                 "company": company,
-                "count": count,
-                "prev_count": prior.get(company, 0),
-                "direction": company_direction(count, prior.get(company, 0)),
+                "total_count": total_count,
+                "ai_count": current_ai.get(company, 0),
+                "count": current_ai.get(company, 0),  # backward compat
+                "ai_pct": round(current_ai.get(company, 0) / total_count * 100) if total_count > 0 else 0,
+                "prev_total_count": prior_total.get(company, 0),
+                "prev_count": prior_ai.get(company, 0),
+                "direction": company_direction(total_count, prior_total.get(company, 0)),
             }
-            for i, (company, count) in enumerate(top_10_companies)
+            for i, (company, total_count) in enumerate(top_10_companies)
         ],
     }
 
