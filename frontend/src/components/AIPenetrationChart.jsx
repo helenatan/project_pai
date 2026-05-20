@@ -2,22 +2,61 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function fmtDate(dateStr) {
+  const [, m, d] = dateStr.split('-').map(Number)
+  return `${MONTHS[m - 1]} ${d}`
+}
+
+function AITooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const ratePt  = payload.find((p) => p.dataKey === 'AI requirement rate')
+  const avgPt   = payload.find((p) => p.dataKey === '7-day rolling average')
+  const rate    = ratePt?.value
+  const aiCount = ratePt?.payload?.aiPostingsCount
+  const total   = rate != null && aiCount != null && rate > 0
+    ? Math.round(aiCount / (rate / 100))
+    : null
+
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid #d8d2c8', borderRadius: 5,
+      padding: '0.45rem 0.65rem', fontSize: '0.76rem', lineHeight: 1.65,
+      boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+    }}>
+      <div style={{ fontWeight: 600, color: '#1a1714', marginBottom: '0.1rem' }}>{label}</div>
+      {rate != null && (
+        <div style={{ color: '#a06010' }}>
+          {parseFloat(rate).toFixed(1)}% of new postings mention AI
+          {total != null && (
+            <span style={{ color: '#6b6560', marginLeft: '0.35rem' }}>
+              ({aiCount} of {total} analyzed)
+            </span>
+          )}
+        </div>
+      )}
+      {avgPt?.value != null && (
+        <div style={{ color: '#a06010', opacity: 0.55 }}>
+          7-day avg: {parseFloat(avgPt.value).toFixed(1)}%
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AIPenetrationChart({ snapshots }) {
   if (!snapshots?.length) return null
 
-  const first = new Date(snapshots[0].snapshot_date)
-  const data = snapshots.map((s) => {
-    const dayN = Math.floor((new Date(s.snapshot_date) - first) / 86_400_000) + 1
-    return {
-      dayLabel: `Day ${dayN}`,
-      'AI requirement rate': s.ai_penetration_rate != null
-        ? parseFloat(parseFloat(s.ai_penetration_rate).toFixed(1))
-        : null,
-      '7-day rolling average': s.ai_penetration_7day_avg != null
-        ? parseFloat(parseFloat(s.ai_penetration_7day_avg).toFixed(1))
-        : null,
-    }
-  })
+  const data = snapshots.map((s) => ({
+    dayLabel: fmtDate(s.snapshot_date),
+    'AI requirement rate': s.ai_penetration_rate != null
+      ? parseFloat(parseFloat(s.ai_penetration_rate).toFixed(1))
+      : null,
+    '7-day rolling average': s.ai_penetration_7day_avg != null
+      ? parseFloat(parseFloat(s.ai_penetration_7day_avg).toFixed(1))
+      : null,
+    aiPostingsCount: s.top_ai_skills?.total_ai_postings_today ?? null,
+  }))
 
   const enoughData = snapshots.filter((s) => s.ai_penetration_rate != null).length >= 2
 
@@ -25,7 +64,7 @@ export default function AIPenetrationChart({ snapshots }) {
     <section>
       <div className="section-header">
         <span className="section-title">II. AI Requirement Rate</span>
-        <span className="section-meta">% of PM postings mentioning AI · Daily</span>
+        <span className="section-meta">% of new postings analyzed (full-text sources) · Daily</span>
       </div>
       {enoughData ? (
         <div className="chart-wrap">
@@ -36,7 +75,7 @@ export default function AIPenetrationChart({ snapshots }) {
                 tickFormatter={(v) => `${v}%`} domain={[0, 100]}
                 tick={{ fontSize: 10, fill: '#6b6560' }} stroke="#d8d2c8" width={44}
               />
-              <Tooltip formatter={(v) => `${parseFloat(v).toFixed(1)}%`} />
+              <Tooltip content={<AITooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line
                 type="monotone" dataKey="AI requirement rate"

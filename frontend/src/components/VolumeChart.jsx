@@ -2,14 +2,18 @@ import {
   AreaChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function fmtDate(dateStr) {
+  const [, m, d] = dateStr.split('-').map(Number)
+  return `${MONTHS[m - 1]} ${d}`
+}
+
 export default function VolumeChart({ snapshots }) {
   if (!snapshots?.length) return null
 
-  const first = new Date(snapshots[0].snapshot_date)
   const data = snapshots.map((s) => {
-    const dayN = Math.floor((new Date(s.snapshot_date) - first) / 86_400_000) + 1
     return {
-      dayLabel: `Day ${dayN}`,
+      dayLabel: fmtDate(s.snapshot_date),
       'Active openings': s.total_postings,
       '7-day rolling average': s.total_postings_7day_avg != null
         ? Math.round(s.total_postings_7day_avg)
