@@ -114,6 +114,7 @@ def fetch_adzuna(supabase: Client, run_date: date) -> dict:
                     "company": job.get("company", {}).get("display_name"),
                     "location": job.get("location", {}).get("display_name"),
                     "posted_date": job.get("created", "")[:10] or None,
+                    "run_date": str(run_date),
                     "description_text": (job.get("description") or "")[:2000],
                     "url": job.get("redirect_url"),
                     "is_remote": None,
@@ -215,6 +216,7 @@ def fetch_jsearch(supabase: Client, run_date: date) -> dict:
                         filter(None, [job.get("job_city"), job.get("job_state")])
                     ),
                     "posted_date": posted_date,
+                    "run_date": str(run_date),
                     "description_text": job.get("job_description") or "",
                     "url": job.get("job_apply_link"),
                     "is_remote": job.get("job_is_remote"),
