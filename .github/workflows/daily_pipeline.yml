@@ -97,6 +97,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.ALERT_EMAIL_USER }}
           password: ${{ secrets.ALERT_EMAIL_PASS }}
+          from: PM Adaptation Index <${{ secrets.ALERT_EMAIL_USER }}>
           to: polaristan@gmail.com
           subject: "PM Adaptation Index: pipeline OK (${{ github.run_number }})"
           body: "Daily pipeline completed. Snapshot written."
@@ -109,6 +110,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.ALERT_EMAIL_USER }}
           password: ${{ secrets.ALERT_EMAIL_PASS }}
+          from: PM Adaptation Index <${{ secrets.ALERT_EMAIL_USER }}>
           to: polaristan@gmail.com
           subject: "ALERT: PM Adaptation Index pipeline FAILED"
           body: "Daily pipeline failed. Check GitHub Actions logs immediately."
