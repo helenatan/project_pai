@@ -39,6 +39,7 @@ export default function HeroMetrics({ snapshot }) {
         <div className="metric-label">AI skill requirement rate</div>
         <div className="metric-value ai-rate">{aiRate != null ? `${aiRate}%` : '—'}</div>
         <div className={`metric-delta ${d3.cls}`}>{d3.text}</div>
+        <div className="metric-note">of new postings analyzed today (full-text sources)</div>
       </div>
     </section>
   )

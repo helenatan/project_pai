@@ -87,6 +87,7 @@ body::before {
 .metric-delta { font-family: 'DM Mono', monospace; font-size: 0.7rem; margin-top: 0.4rem; color: var(--ink-faint); }
 .metric-delta.up { color: var(--signal-green); }
 .metric-delta.down { color: var(--signal-red); }
+.metric-note { font-family: 'DM Mono', monospace; font-size: 0.63rem; margin-top: 0.3rem; color: var(--ink-faint); opacity: 0.7; }
 
 /* ── SECTION HEADER ── */
 .section-header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--ink); gap: 1rem; flex-wrap: wrap; }
@@ -158,6 +159,7 @@ body::before {
 .bar-fill { height: 100%; border-radius: 2px; }
 .bar-fill.amber { background: var(--signal-amber); }
 .bar-fill.blue  { background: var(--signal-blue); }
+.bar-fill.blue-faint { background: #b0c4d8; }
 .skill-count-col { text-align: right; }
 .count-number { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 600; line-height: 1; }
 .count-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-top: 1px; }
@@ -167,12 +169,17 @@ body::before {
 .dir-falling { color: var(--signal-red); }
 .dir-flat { color: var(--ink-faint); }
 
-.co-row { display: grid; grid-template-columns: 22px 1fr 68px; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
+.co-row { display: grid; grid-template-columns: 22px 1fr 80px; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
 .co-row:last-child { margin-bottom: 0; }
 .co-rank { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-faint); text-align: right; }
 .co-bar-area { display: flex; flex-direction: column; gap: 0.25rem; }
 .co-name { font-family: 'Lora', serif; font-size: 0.875rem; color: var(--ink-mid); line-height: 1.25; }
 .co-count-col { text-align: right; }
+.count-pct { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--signal-amber); font-weight: 600; margin-top: 1px; }
+.co-legend { display: flex; gap: 1.25rem; margin-top: 0.9rem; font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--ink-faint); letter-spacing: 0.04em; }
+.legend-swatch { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.amber-swatch { background: var(--signal-amber); }
+.blue-faint-swatch { background: #b0c4d8; }
 .co-list { padding-top: 1rem; max-width: 480px; }
 
 /* ── DOMAIN CARDS ── */
