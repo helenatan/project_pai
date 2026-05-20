@@ -133,6 +133,7 @@ def to_raw_record_greenhouse(job: dict, company: str, today: date) -> dict:
         # posted_date = first-seen date (today). The unique constraint preserves
         # the original posted_date on subsequent runs.
         "posted_date": str(today),
+        "run_date": str(today),
         "description_text": strip_html(job.get("content") or ""),
         "url": job.get("absolute_url"),
         "is_remote": None,
@@ -148,6 +149,7 @@ def to_raw_record_ashby(job: dict, company: str, today: date) -> dict:
         "company": company,
         "location": job.get("location"),
         "posted_date": str(today),
+        "run_date": str(today),
         "description_text": strip_html(
             job.get("descriptionPlain") or job.get("descriptionHtml") or ""
         ),

@@ -203,9 +203,16 @@ def main():
 
     log.info(f"data_quality_status={data_quality_status}")
 
-    # ── 1. VOLUME (Adzuna live count) ────────────────────────────────────────────
+    # ── 1. VOLUME ────────────────────────────────────────────────────────────────
+    # total_postings: Adzuna's live count of all currently-active PM listings.
     total_postings = adzuna_log["adzuna_total_count"] if adzuna_log else None
-    new_postings_today = adzuna_log["records_inserted"] if adzuna_log else None
+    # new_postings_today: deduplicated count of jobs first ingested on
+    # target_date across all sources (see new_jobs_on() in migration 004).
+    new_jobs_resp = supabase.rpc(
+        "new_jobs_on", {"day": str(target_date), "version": PIPELINE_VERSION}
+    ).execute()
+    new_postings_today = new_jobs_resp.data
+    log.info(f"new_postings_today (deduped, all sources)={new_postings_today}")
 
     # ── 2. ROLLING AVERAGES ───────────────────────────────────────────────────────
     total_postings_7day_avg = rolling_7day_avg(supabase, "total_postings", target_date)
