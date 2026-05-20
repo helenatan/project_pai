@@ -56,7 +56,12 @@ function formatKeyword(kw) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-function DomainCard({ domain, countByKeyword, wide }) {
+function fmtEst(n) {
+  if (n == null) return null
+  return `~${Math.round(n).toLocaleString()}`
+}
+
+function DomainCard({ domain, countByKeyword, scaleFactor, wide }) {
   const withData = domain.keywords
     .map((kw) => ({ kw, count: countByKeyword[kw] || 0 }))
     .filter((x) => x.count > 0)
@@ -84,8 +89,10 @@ function DomainCard({ domain, countByKeyword, wide }) {
                 </div>
               </div>
               <div className="skill-count-col">
-                <div className="count-number" style={{ color: 'var(--signal-amber)' }}>{x.count}</div>
-                <div className="count-label">jobs</div>
+                <div className="count-number" style={{ color: 'var(--signal-amber)' }}>
+                  {scaleFactor != null ? fmtEst(x.count * scaleFactor) : x.count}
+                </div>
+                <div className="count-label">{scaleFactor != null ? 'est.' : 'jobs'}</div>
               </div>
             </div>
           ))}
@@ -118,7 +125,16 @@ export default function SkillsPanel({ snapshot }) {
   const withSignal = DOMAINS.filter(
     (d) => d.keywords.some((kw) => (countByKeyword[kw] || 0) > 0)
   ).length
-  const totalAi = snapshot?.top_ai_skills?.total_ai_postings_today
+
+  // Scale raw sample counts up to the estimated active-market total,
+  // using the same factor as the hero metric (rate × Adzuna active count).
+  const sampleAiCount = snapshot?.top_ai_skills?.total_ai_postings_today
+  const estimatedAiTotal = snapshot?.total_postings != null && snapshot?.ai_penetration_rate != null
+    ? Math.round(snapshot.total_postings * snapshot.ai_penetration_rate / 100)
+    : null
+  const scaleFactor = estimatedAiTotal != null && sampleAiCount > 0
+    ? estimatedAiTotal / sampleAiCount
+    : null
 
   return (
     <section>
@@ -129,8 +145,9 @@ export default function SkillsPanel({ snapshot }) {
       <p className="domain-intro">
         PM job descriptions reveal which AI competencies employers actually require.
         {' '}{withSignal} of 7 categories show signal in the latest snapshot
-        {totalAi != null ? ` (${totalAi} AI-mentioning PM postings)` : ''}; the rest are
-        tracked and will build signal as more data accumulates.
+        {estimatedAiTotal != null
+          ? ` (~${estimatedAiTotal.toLocaleString()} active openings estimated to mention AI skills)`
+          : ''}; the rest are tracked and will build signal as more data accumulates.
       </p>
       <div className="domain-grid">
         {DOMAINS.map((d, i) => (
@@ -138,6 +155,7 @@ export default function SkillsPanel({ snapshot }) {
             key={d.slug}
             domain={d}
             countByKeyword={countByKeyword}
+            scaleFactor={scaleFactor}
             wide={i === DOMAINS.length - 1}
           />
         ))}
