@@ -1,47 +1,39 @@
-const DIRECTION_BADGE = {
-  up:   { label: '↑', color: '#1a7a4a' },
-  down: { label: '↓', color: '#c0392b' },
-  flat: { label: '→', color: '#6080a0' },
-  new:  { label: 'new', color: '#7b2fc0' },
+const DIRECTION = {
+  up:   { label: '▲ up',   cls: 'dir-rising' },
+  down: { label: '▼ down', cls: 'dir-falling' },
+  flat: { label: '■ flat', cls: 'dir-flat' },
+  new:  { label: '★ new',  cls: 'dir-new' },
 }
 
 export default function CompaniesPanel({ snapshot }) {
   const data = snapshot?.top_employers_ai_skills
   if (!data?.companies?.length) return null
 
-  const top = data.companies[0].count
+  const top = data.companies[0].count || 1
 
   return (
-    <section style={{ marginBottom: '2rem' }}>
-      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#1a2a3a', marginBottom: '0.25rem' }}>
-        Top Companies Hiring PMs with AI Skills
-      </h2>
-      <div style={{ fontSize: '0.75rem', color: '#6080a0', marginBottom: '0.75rem' }}>
-        7-day rolling window ending {data.window_end}
+    <section className="count-bar-section">
+      <div className="section-header">
+        <span className="section-title">IV. Top Companies Hiring AI PMs</span>
+        <span className="section-meta">Window ending {data.window_end} · By JD keyword</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="co-list">
+        <div className="panel-subtitle">PM postings mentioning AI skills · 7-day window</div>
         {data.companies.map((co) => {
-          const badge = DIRECTION_BADGE[co.direction] || DIRECTION_BADGE.flat
-          const barWidth = top > 0 ? (co.count / top) * 100 : 0
+          const dir = DIRECTION[co.direction] || DIRECTION.flat
           return (
-            <div key={co.company}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                <span style={{ fontSize: '0.85rem', color: '#1a2a3a', textTransform: 'capitalize' }}>
-                  {co.rank}. {co.company}
-                  <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem', color: badge.color, fontWeight: 600 }}>
-                    {badge.label}
-                  </span>
-                </span>
-                <span style={{ fontSize: '0.8rem', color: '#4a6080' }}>{co.count}</span>
+            <div className="co-row" key={co.company}>
+              <span className="co-rank">{co.rank}</span>
+              <div className="co-bar-area">
+                <span className="co-name">{co.company}</span>
+                <div className="bar-track">
+                  <div className="bar-fill blue" style={{ width: `${(co.count / top) * 100}%` }} />
+                </div>
               </div>
-              <div style={{ background: '#e0e8f0', borderRadius: 4, height: 6 }}>
-                <div style={{
-                  background: '#a06010',
-                  width: `${barWidth}%`,
-                  height: '100%',
-                  borderRadius: 4,
-                  transition: 'width 0.3s',
-                }} />
+              <div className="co-count-col">
+                <div className="count-number" style={{ color: 'var(--signal-blue)' }}>{co.count}</div>
+                <div className="count-label">jobs</div>
+                <div className={`dir-badge ${dir.cls}`}>{dir.label}</div>
               </div>
             </div>
           )
