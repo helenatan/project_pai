@@ -33,6 +33,20 @@ def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 
+def fetch_all_rows(build_query, page_size: int = 1000) -> list[dict]:
+    """Page through a PostgREST query so results are not silently capped at
+    1000 rows. build_query must return a fresh query builder on each call."""
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        page = build_query().range(offset, offset + page_size - 1).execute().data
+        rows.extend(page)
+        if len(page) < page_size:
+            break
+        offset += page_size
+    return rows
+
+
 def yesterday() -> date:
     return date.today() - timedelta(days=1)
 
@@ -78,14 +92,14 @@ def _batched_in(supabase, table: str, columns: str, ids: list, batch_size: int =
 
 def fetch_enriched_full_text(supabase: Client, target_date: date) -> list[dict]:
     """All enriched records for target_date from full-text sources (JSearch+Greenhouse+Ashby)."""
-    raw_resp = (
-        supabase.table("job_postings_raw")
+    raw_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
         .select("id")
         .eq("posted_date", str(target_date))
         .in_("source", FULL_TEXT_SOURCES)
-        .execute()
+        .order("id")
     )
-    raw_ids = [r["id"] for r in raw_resp.data]
+    raw_ids = [r["id"] for r in raw_rows]
     if not raw_ids:
         return []
     return _batched_in(
@@ -101,16 +115,16 @@ def fetch_enriched_full_text_range(
     supabase: Client, since: date, before: date
 ) -> list[dict]:
     """All enriched full-text records in [since, before)."""
-    raw_resp = (
-        supabase.table("job_postings_raw")
+    raw_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
         .select("id,posted_date")
         .gte("posted_date", str(since))
         .lt("posted_date", str(before))
         .in_("source", FULL_TEXT_SOURCES)
-        .execute()
+        .order("id")
     )
-    raw_ids = [r["id"] for r in raw_resp.data]
-    raw_date_map = {r["id"]: r["posted_date"] for r in raw_resp.data}
+    raw_ids = [r["id"] for r in raw_rows]
+    raw_date_map = {r["id"]: r["posted_date"] for r in raw_rows}
     if not raw_ids:
         return []
     enriched = _batched_in(
@@ -254,15 +268,15 @@ def main():
     prev_7day_days_with_data = len(prior_dates)
 
     # All-time seen keywords (for 'new' detection)
-    ever_seen_resp = (
-        supabase.table("job_postings_enriched")
+    ever_seen_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_enriched")
         .select("ai_keyword_matches")
         .eq("pipeline_version", PIPELINE_VERSION)
         .eq("has_ai_requirement", True)
-        .execute()
+        .order("raw_id")
     )
     ever_seen: set[str] = set()
-    for row in ever_seen_resp.data:
+    for row in ever_seen_rows:
         for kw in (row.get("ai_keyword_matches") or []):
             ever_seen.add(kw)
     # Also include the prior 7-day keywords so recently-seen aren't labeled 'new'
@@ -326,13 +340,13 @@ def main():
     }
 
     # ── 6. DEDUP QUALITY ─────────────────────────────────────────────────────────
-    all_enriched_today_resp = (
-        supabase.table("job_postings_raw")
+    all_raw_today = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
         .select("id")
         .eq("posted_date", str(target_date))
-        .execute()
+        .order("id")
     )
-    all_raw_ids_today = [r["id"] for r in all_enriched_today_resp.data]
+    all_raw_ids_today = [r["id"] for r in all_raw_today]
     total_postings_raw = len(all_raw_ids_today)
 
     if all_raw_ids_today:
