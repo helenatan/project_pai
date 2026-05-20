@@ -5,6 +5,36 @@ const DIRECTION = {
   new:  { label: '★ new',  cls: 'dir-new' },
 }
 
+// Known brands whose casing a plain title-case would mangle.
+const COMPANY_NAMES = {
+  openai: 'OpenAI',
+  mongodb: 'MongoDB',
+  xai: 'xAI',
+  deepmind: 'DeepMind',
+  'google deepmind': 'Google DeepMind',
+  github: 'GitHub',
+  youcom: 'You.com',
+  'you.com': 'You.com',
+  zoominfo: 'ZoomInfo',
+  coreweave: 'CoreWeave',
+  elevenlabs: 'ElevenLabs',
+  llamaindex: 'LlamaIndex',
+  langchain: 'LangChain',
+  thinkingmachines: 'Thinking Machines',
+  blackforestlabs: 'Black Forest Labs',
+}
+const NAME_ACRONYMS = new Set(['ai', 'ml', 'hr', 'api'])
+
+function formatCompany(name) {
+  if (!name) return ''
+  const key = name.toLowerCase().trim()
+  if (COMPANY_NAMES[key]) return COMPANY_NAMES[key]
+  return key
+    .split(' ')
+    .map((w) => (NAME_ACRONYMS.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ')
+}
+
 export default function CompaniesPanel({ snapshot }) {
   const data = snapshot?.top_employers_ai_skills
   if (!data?.companies?.length) return null
@@ -25,7 +55,7 @@ export default function CompaniesPanel({ snapshot }) {
             <div className="co-row" key={co.company}>
               <span className="co-rank">{co.rank}</span>
               <div className="co-bar-area">
-                <span className="co-name">{co.company}</span>
+                <span className="co-name">{formatCompany(co.company)}</span>
                 <div className="bar-track">
                   <div className="bar-fill blue" style={{ width: `${(co.count / top) * 100}%` }} />
                 </div>
