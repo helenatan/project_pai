@@ -65,6 +65,8 @@ PM_TITLE_EXCLUSIONS = [
     "product marketing",
     "product support",
     "product analyst",
+    "product engineer",       # e.g. "Senior Staff Product Engineer" -- engineering role
+    "product finance",        # e.g. "Director of Product Finance" -- finance exec, not PM
     "data engineering manager, product",
     "engineering manager, product",
     "engineering manager, vertical ai products",
@@ -73,6 +75,15 @@ PM_TITLE_EXCLUSIONS = [
     "research engineer",
     "developer productivity",
     "new product introduction",
+]
+
+# US location keywords used to populate is_us on new records.
+_US_LOC_KEYWORDS = [
+    "united states", "san francisco", "new york", "nyc", "seattle",
+    "chicago", "atlanta", "boston", "austin", "los angeles", "denver",
+    "miami", "houston", "portland", "california", "new jersey",
+    "washington, d",          # covers "Washington, DC" and "Washington, D.C."
+    "remote in the us", "remote-us", "us remote", "us - remote", "- us",
 ]
 
 
@@ -87,6 +98,13 @@ def is_pm_title(title: str) -> bool:
     if any(ex in t for ex in PM_TITLE_EXCLUSIONS):
         return False
     return any(p in t for p in PM_TITLE_PATTERNS)
+
+
+def is_us_location(location: str) -> bool:
+    if not location:
+        return False
+    loc = location.lower()
+    return any(k in loc for k in _US_LOC_KEYWORDS)
 
 
 def strip_html(text: str) -> str:
@@ -124,16 +142,19 @@ def fetch_ashby_board(session: requests.Session, slug: str) -> list[dict]:
 
 
 def to_raw_record_greenhouse(job: dict, company: str, today: date) -> dict:
+    location = (job.get("location") or {}).get("name")
     return {
         "source": "greenhouse",
         "source_id": str(job["id"]),
         "title": job.get("title"),
         "company": company,
-        "location": (job.get("location") or {}).get("name"),
-        # posted_date = first-seen date (today). The unique constraint preserves
-        # the original posted_date on subsequent runs.
+        "location": location,
+        # posted_date / run_date = first-seen date. The unique constraint
+        # (source, source_id) preserves these on subsequent runs via ignore_duplicates.
         "posted_date": str(today),
         "run_date": str(today),
+        "last_seen_date": str(today),   # overwritten by batch update each run
+        "is_us": is_us_location(location or ""),
         "description_text": strip_html(job.get("content") or ""),
         "url": job.get("absolute_url"),
         "is_remote": None,
@@ -142,14 +163,17 @@ def to_raw_record_greenhouse(job: dict, company: str, today: date) -> dict:
 
 
 def to_raw_record_ashby(job: dict, company: str, today: date) -> dict:
+    location = job.get("location")
     return {
         "source": "ashby",
         "source_id": str(job["id"]),
         "title": job.get("title"),
         "company": company,
-        "location": job.get("location"),
+        "location": location,
         "posted_date": str(today),
         "run_date": str(today),
+        "last_seen_date": str(today),   # overwritten by batch update each run
+        "is_us": is_us_location(location or ""),
         "description_text": strip_html(
             job.get("descriptionPlain") or job.get("descriptionHtml") or ""
         ),
@@ -191,6 +215,7 @@ def fetch_source(
             pm_jobs = [j for j in jobs if is_pm_title(j.get("title", ""))]
             log.info(f"  {company} ({slug}): {len(jobs)} total, {len(pm_jobs)} PM")
 
+            source_ids_seen: list[str] = []
             for job in pm_jobs:
                 records_fetched += 1
                 record = converter(job, company, today)
@@ -198,6 +223,7 @@ def fetch_source(
                     records_skipped += 1
                     continue
 
+                source_ids_seen.append(record["source_id"])
                 resp = (
                     supabase.table("job_postings_raw")
                     .upsert(
@@ -211,6 +237,15 @@ def fetch_source(
                     records_inserted += 1
                 else:
                     records_skipped += 1
+
+            # Update last_seen_date for every active job (new and pre-existing).
+            # ignore_duplicates=True above skips the update for existing rows, so
+            # we do one explicit batch update per board to keep last_seen_date current.
+            for i in range(0, len(source_ids_seen), 100):
+                batch = source_ids_seen[i : i + 100]
+                supabase.table("job_postings_raw").update(
+                    {"last_seen_date": str(today)}
+                ).eq("source", source).in_("source_id", batch).execute()
 
         except Exception as e:
             log.error(f"  {company} ({slug}) failed: {e}")
