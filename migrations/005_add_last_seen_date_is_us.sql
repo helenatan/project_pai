@@ -6,9 +6,12 @@
 --
 -- is_us: set at ingest time from location text. Filters company counts to US roles only,
 -- preventing London/Singapore/Tokyo postings from inflating company totals.
+--
+-- This migration is idempotent (IF NOT EXISTS guards + IS NULL backfill filters),
+-- so it is safe to re-run if a previous attempt only partially applied.
 
 -- ── 1. last_seen_date ─────────────────────────────────────────────────────────
-ALTER TABLE job_postings_raw ADD COLUMN last_seen_date DATE;
+ALTER TABLE job_postings_raw ADD COLUMN IF NOT EXISTS last_seen_date DATE;
 
 -- Backfill employer-board records: best estimate is first-seen (run_date).
 -- fetch_employers.py will overwrite with today's date on its next run.
@@ -17,13 +20,14 @@ SET last_seen_date = run_date
 WHERE source IN ('greenhouse', 'ashby', 'lever')
   AND last_seen_date IS NULL;
 
-CREATE INDEX idx_raw_last_seen_date ON job_postings_raw (last_seen_date);
+CREATE INDEX IF NOT EXISTS idx_raw_last_seen_date ON job_postings_raw (last_seen_date);
 
 -- ── 2. is_us ─────────────────────────────────────────────────────────────────
-ALTER TABLE job_postings_raw ADD COLUMN is_us BOOLEAN;
+ALTER TABLE job_postings_raw ADD COLUMN IF NOT EXISTS is_us BOOLEAN;
 
 -- JSearch and Adzuna are US-only by query construction.
-UPDATE job_postings_raw SET is_us = TRUE WHERE source IN ('adzuna', 'jsearch');
+UPDATE job_postings_raw SET is_us = TRUE
+WHERE source IN ('adzuna', 'jsearch') AND is_us IS DISTINCT FROM TRUE;
 
 -- Employer-board backfill: detect US from location text.
 -- fetch_employers.py will set this correctly on new inserts going forward.
@@ -58,4 +62,4 @@ WHERE source IN ('greenhouse', 'ashby', 'lever')
 
 -- NULL is_us = location could not be determined; treated as non-US in company count.
 
-CREATE INDEX idx_raw_is_us ON job_postings_raw (is_us);
+CREATE INDEX IF NOT EXISTS idx_raw_is_us ON job_postings_raw (is_us);
