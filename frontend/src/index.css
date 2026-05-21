@@ -177,7 +177,7 @@ body::before {
 .co-main { display: flex; flex-direction: column; gap: 0.32rem; }
 .co-name-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
 .co-name { font-family: 'Lora', serif; font-size: 0.9rem; color: var(--ink-mid); line-height: 1.2; }
-.co-total-num { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--ink-mid); }
+.co-total-num { font-family: 'DM Mono', monospace; font-size: 0.95rem; font-weight: 700; color: var(--ink-mid); }
 .co-bar-track { height: 8px; background: #ece7df; border-radius: 4px; position: relative; overflow: hidden; }
 .co-bar-total { position: absolute; left: 0; top: 0; height: 100%; background: #c2cedb; border-radius: 4px; }
 .co-bar-ai { position: absolute; left: 0; top: 0; height: 100%; background: var(--signal-amber); border-radius: 4px; }
