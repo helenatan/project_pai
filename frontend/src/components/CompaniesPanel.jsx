@@ -55,7 +55,7 @@ export default function CompaniesPanel({ snapshot }) {
         <>
           <div className="co-table">
             <span />
-            <span className="co-th">Total PM openings</span>
+            <span className="co-th total">Total PM openings</span>
             <span className="co-th ai">Require AI</span>
             <span className="co-th ai">% of total</span>
             <div className="co-table-rule" />
