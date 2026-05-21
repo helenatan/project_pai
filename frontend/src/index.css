@@ -168,7 +168,7 @@ body::before {
 .dir-flat { color: var(--ink-faint); }
 
 /* Top Companies — column table (ranked by total PM openings) */
-.co-table { display: grid; grid-template-columns: 20px 1fr 58px 58px; gap: 0.95rem 0.7rem; align-items: center; padding-top: 1.15rem; max-width: 520px; }
+.co-table { display: grid; grid-template-columns: 20px 1fr 58px 58px; gap: 0.95rem 0.7rem; align-items: baseline; padding-top: 1.15rem; max-width: 520px; }
 .co-th { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
 .co-th.total { text-align: right; }
 .co-th.ai { color: var(--signal-amber); text-align: right; }
