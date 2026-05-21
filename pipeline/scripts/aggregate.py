@@ -168,11 +168,11 @@ def company_direction(current_count: int, prev_count: int) -> str:
 
 
 def count_companies(records: list[dict]) -> dict[str, int]:
-    """Count distinct PM postings per company by raw_id.
+    """Count PM job postings per company by raw_id -- one count per posting.
 
-    Employer-board records are authoritative (each Greenhouse/Ashby job has a
-    unique source_id), so raw_id gives the correct per-posting count without
-    collapsing same-title roles at the same company into one.
+    Each posting counts separately, including the same role posted in multiple
+    locations: a role open in four locations is four openings. Every
+    Greenhouse/Ashby posting has a unique source_id, hence a unique raw_id.
     """
     out: dict[str, set] = {}
     for r in records:
