@@ -48,6 +48,13 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python pipeline/scripts/aggregate.py
 
+      - name: QA check — top 10 companies vs live ATS
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/test_top_companies.py
+        continue-on-error: true   # report discrepancies but don't block digest/backup
+
       - name: Run digest (Saturdays only -- script self-guards)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
