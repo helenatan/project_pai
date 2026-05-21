@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Skills by Domain — proposed redesign</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; background:#faf8f5; font-family:'Inter',system-ui,-apple-system,sans-serif; color:#1c1917; -webkit-text-size-adjust:100%; }
+  .wrap { max-width:880px; margin:0 auto; padding:1.5rem 1.15rem 3.5rem; }
+
+  .banner { font-family:'DM Mono',ui-monospace,monospace; font-size:0.6rem; letter-spacing:.12em; text-transform:uppercase; color:#a06010; font-weight:700; margin-bottom:1.4rem; }
+
+  .section-header { display:flex; justify-content:space-between; align-items:baseline; padding:1.1rem 0 0.7rem; border-bottom:1px solid #1c1917; gap:0.5rem 1rem; flex-wrap:wrap; }
+  .section-title { font-family:'Playfair Display',Georgia,serif; font-size:1.15rem; font-weight:600; }
+  .section-meta { font-family:'DM Mono',ui-monospace,monospace; font-size:0.62rem; letter-spacing:.07em; text-transform:uppercase; color:#6b6560; }
+  .intro { font-family:'Lora',Georgia,serif; font-size:0.85rem; font-style:italic; color:#57534e; line-height:1.6; margin:0.9rem 0 1.5rem; max-width:660px; }
+
+  .sk-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.6rem 2rem; }
+  .sk-card { display:flex; flex-direction:column; min-height:178px; }
+  .sk-name { font-family:'Playfair Display',Georgia,serif; font-size:1rem; font-weight:600; margin:0 0 0.2rem; }
+  .sk-def { font-family:'Lora',Georgia,serif; font-size:0.78rem; font-style:italic; color:#6b6560; line-height:1.45; margin:0 0 0.65rem; }
+  .sk-rule { border:none; border-top:1px solid #d8d2c8; margin:0 0 0.8rem; }
+  .sk-row { display:grid; grid-template-columns:118px 1fr 38px; align-items:center; gap:0.6rem; margin-bottom:0.55rem; }
+  .sk-label { font-family:'Lora',Georgia,serif; font-size:0.83rem; color:#3d3830; }
+  .sk-track { height:6px; background:#ece7df; border-radius:3px; overflow:hidden; }
+  .sk-fill { height:100%; background:#a06010; border-radius:3px; }
+  .sk-pct { font-family:'DM Mono',monospace; font-size:0.8rem; font-weight:700; color:#a06010; text-align:right; }
+  .sk-more { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:.04em; text-transform:uppercase; color:#a89f93; margin-top:auto; padding-top:0.55rem; }
+
+  .sk-awaiting { background:#f3efe8; border:1px solid #e6e0d6; border-radius:6px; padding:1rem 1.1rem; display:flex; flex-direction:column; min-height:178px; }
+  .awaiting-hd { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:.1em; text-transform:uppercase; color:#a89f93; margin-bottom:0.75rem; }
+  .awaiting-item { margin-bottom:0.65rem; }
+  .awaiting-name { font-family:'Playfair Display',Georgia,serif; font-size:0.92rem; font-weight:600; color:#6b6560; }
+  .awaiting-def { font-family:'Lora',Georgia,serif; font-size:0.74rem; font-style:italic; color:#a89f93; line-height:1.45; }
+  .awaiting-foot { font-family:'DM Mono',monospace; font-size:0.58rem; color:#a89f93; margin-top:auto; padding-top:0.45rem; }
+
+  @media (max-width:680px) {
+    .sk-grid { grid-template-columns:1fr; gap:1.75rem; }
+    .sk-card { min-height:0; }
+    .sk-card:not(:last-of-type) { border-bottom:1px solid #ece7df; padding-bottom:1.5rem; }
+    .sk-awaiting { min-height:0; }
+    .section-title { font-size:1.05rem; }
+    .sk-row { grid-template-columns:122px 1fr 40px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">Proposed redesign · AI Skills section</div>
+  <section>
+    <div class="section-header">
+      <span class="section-title">III. AI Skills by Domain</span>
+      <span class="section-meta">5 of 7 domains active</span>
+    </div>
+    <p class="intro">
+      Which AI competencies PM job descriptions ask for. Each bar is the share of
+      AI-mentioning postings that cite a skill — from 18 sampled in the latest snapshot.
+    </p>
+    <div class="sk-grid" id="render"></div>
+  </section>
+</div>
+<script>
+const domains = [
+  { name:'Model Fluency', def:"Reasoning about what AI models can and can't do.",
+    skills:[['LLMs',39],['Generative AI',28],['Machine learning',17]], more:6 },
+  { name:'Agentic Systems', def:'Designing products where AI acts autonomously.',
+    skills:[['Agentic',44],['AI agents',28],['Agentic workflows',22]], more:3 },
+  { name:'AI Building Blocks', def:'The technical pieces that power AI features.',
+    skills:[['RAG',28],['Conversational AI',22],['Prompt engineering',11]], more:5 },
+  { name:'AI Deployment', def:'Owning AI systems in production.',
+    skills:[['AI platform',22],['MLOps',11]], more:6 },
+  { name:'Evals & Quality', def:"Defining and measuring what 'good' means for AI.",
+    skills:[['Human-in-the-loop',17],['Hallucination',11]], more:5 },
+];
+const awaiting = [
+  { name:'AI Safety', def:'Shipping AI that is trustworthy, fair, and compliant.' },
+  { name:'AI Product Vision', def:'Setting long-term AI product direction.' },
+];
+
+const cards = domains.map(d => `
+  <div class="sk-card">
+    <h3 class="sk-name">${d.name}</h3>
+    <p class="sk-def">${d.def}</p>
+    <hr class="sk-rule">
+    ${d.skills.map(([label,pct]) => `
+      <div class="sk-row">
+        <span class="sk-label">${label}</span>
+        <div class="sk-track"><div class="sk-fill" style="width:${pct}%"></div></div>
+        <span class="sk-pct">${pct}%</span>
+      </div>`).join('')}
+    <div class="sk-more">+${d.more} keywords tracked</div>
+  </div>`).join('');
+
+const awaitingCard = `
+  <div class="sk-awaiting">
+    <div class="awaiting-hd">Awaiting signal</div>
+    ${awaiting.map(a => `
+      <div class="awaiting-item">
+        <div class="awaiting-name">${a.name}</div>
+        <div class="awaiting-def">${a.def}</div>
+      </div>`).join('')}
+    <div class="awaiting-foot">Tracked — no sampled postings cite these yet.</div>
+  </div>`;
+
+document.getElementById('render').innerHTML = cards + awaitingCard;
+</script>
+</body>
+</html>
