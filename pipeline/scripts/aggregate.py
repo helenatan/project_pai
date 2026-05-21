@@ -168,19 +168,19 @@ def company_direction(current_count: int, prev_count: int) -> str:
 
 
 def count_companies(records: list[dict]) -> dict[str, int]:
-    """Count distinct PM postings per company by raw_id.
+    """Count distinct PM roles per company by dedup_hash (company + title).
 
-    Employer-board records are authoritative (each Greenhouse/Ashby job has a
-    unique source_id), so raw_id gives the correct per-posting count without
-    collapsing same-title roles at the same company into one.
+    Greenhouse boards post the same role once per location (e.g. "Sr. Product
+    Manager, DBSQL" listed separately for SF and Seattle). Counting by raw_id
+    would count each location; dedup_hash collapses them so one role counts once.
     """
     out: dict[str, set] = {}
     for r in records:
         company = r.get("company_normalized") or ""
         if not company:
             continue
-        out.setdefault(company, set()).add(r.get("raw_id"))
-    return {company: len(ids) for company, ids in out.items()}
+        out.setdefault(company, set()).add(r.get("dedup_hash"))
+    return {company: len(hashes) for company, hashes in out.items()}
 
 
 def fetch_active_employer_records(supabase: Client, since: date, version: str) -> list[dict]:
