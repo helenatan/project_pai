@@ -51,9 +51,12 @@ PM_TITLE_PATTERNS = [
     "vice president of product",
     "chief product officer",
     "group product manager",
-    "principal product",
-    "staff product",
-    "senior product",
+    # Seniority-prefixed patterns require the full "... product manager" phrase.
+    # Loose forms ("staff product", "senior product") wrongly matched
+    # "Staff Product Quality Engineer", "Senior Production Manager", etc.
+    "principal product manager",
+    "staff product manager",
+    "senior product manager",
     "associate product manager",
     "junior product manager",
 ]
@@ -67,6 +70,8 @@ PM_TITLE_EXCLUSIONS = [
     "product analyst",
     "product engineer",       # e.g. "Senior Staff Product Engineer" -- engineering role
     "product finance",        # e.g. "Director of Product Finance" -- finance exec, not PM
+    "product sourcing",       # e.g. "Director, Product Sourcing Engineering" -- not PM
+    "of production",          # e.g. "Head of Production" matched "head of product"
     "data engineering manager, product",
     "engineering manager, product",
     "engineering manager, vertical ai products",

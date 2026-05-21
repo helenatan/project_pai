@@ -13,12 +13,10 @@
 -- ── 1. last_seen_date ─────────────────────────────────────────────────────────
 ALTER TABLE job_postings_raw ADD COLUMN IF NOT EXISTS last_seen_date DATE;
 
--- Backfill employer-board records: best estimate is first-seen (run_date).
--- fetch_employers.py will overwrite with today's date on its next run.
-UPDATE job_postings_raw
-SET last_seen_date = run_date
-WHERE source IN ('greenhouse', 'ashby', 'lever')
-  AND last_seen_date IS NULL;
+-- No backfill. last_seen_date stays NULL until fetch_employers.py confirms a job
+-- is still live on its board. NULL is correctly excluded from the active-job
+-- company count (last_seen_date >= window_start is false for NULL). Backfilling
+-- from run_date would wrongly mark already-removed jobs as recently active.
 
 CREATE INDEX IF NOT EXISTS idx_raw_last_seen_date ON job_postings_raw (last_seen_date);
 
