@@ -28,6 +28,10 @@ PIPELINE_VERSION = "v1.0"
 # because its descriptions are truncated.
 FULL_TEXT_SOURCES = ["jsearch", "greenhouse", "ashby"]
 
+# Employer-board sources: authoritative, curated company boards.
+# Used for company count (filtered by last_seen_date + is_us, not posted_date).
+EMPLOYER_SOURCES = ["greenhouse", "ashby"]
+
 
 def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -164,14 +168,46 @@ def company_direction(current_count: int, prev_count: int) -> str:
 
 
 def count_companies(records: list[dict]) -> dict[str, int]:
-    """Dedup by dedup_hash within the window, group by normalized company."""
+    """Count distinct PM postings per company by raw_id.
+
+    Employer-board records are authoritative (each Greenhouse/Ashby job has a
+    unique source_id), so raw_id gives the correct per-posting count without
+    collapsing same-title roles at the same company into one.
+    """
     out: dict[str, set] = {}
     for r in records:
         company = r.get("company_normalized") or ""
         if not company:
             continue
-        out.setdefault(company, set()).add(r.get("dedup_hash"))
-    return {company: len(hashes) for company, hashes in out.items()}
+        out.setdefault(company, set()).add(r.get("raw_id"))
+    return {company: len(ids) for company, ids in out.items()}
+
+
+def fetch_active_employer_records(supabase: Client, since: date, version: str) -> list[dict]:
+    """US employer-board PM jobs that were still active within the last 7 days.
+
+    Uses last_seen_date (updated every run) instead of posted_date (first-seen,
+    never updated) so stable long-running jobs (e.g. Stripe) are counted and
+    recently-filled jobs age out within one week.
+    """
+    raw_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .gte("last_seen_date", str(since))
+        .in_("source", EMPLOYER_SOURCES)
+        .eq("is_us", True)
+        .order("id")
+    )
+    raw_ids = [r["id"] for r in raw_rows]
+    if not raw_ids:
+        return []
+    return _batched_in(
+        supabase,
+        "job_postings_enriched",
+        "raw_id,dedup_hash,has_ai_requirement,ai_keyword_matches,company_normalized",
+        raw_ids,
+        extra_eq=(("pipeline_version", version),),
+    )
 
 
 def main():
@@ -303,24 +339,35 @@ def main():
         ],
     }
 
-    # ── 5. TOP 10 COMPANIES (7-day rolling window, inclusive of target_date) ───
-    # Window: [target_date - 6, target_date + 1) = 7 days ending on target_date.
-    # Prior:  [target_date - 13, target_date - 6) = preceding 7-day window.
-    # Idempotent for reprocessing because we never reference future dates.
+    # ── 5. TOP 10 COMPANIES ──────────────────────────────────────────────────────
+    # Count US PM openings that were still live on each employer board within
+    # the past 7 days (last_seen_date >= today - 6). This correctly handles:
+    #   - Stable companies (e.g. Stripe): all active jobs counted, not just new ones
+    #   - Filled/removed roles: age out within 7 days as last_seen_date goes stale
+    #   - Non-US roles: excluded via is_us flag set at ingest time
     seven_day_start = target_date - timedelta(days=6)
-    seven_day_records = fetch_enriched_full_text_range(supabase, seven_day_start, target_date + timedelta(days=1))
-    seven_day_ai = [r for r in seven_day_records if r.get("has_ai_requirement")]
+    active_records = fetch_active_employer_records(supabase, seven_day_start, PIPELINE_VERSION)
+    active_ai = [r for r in active_records if r.get("has_ai_requirement")]
 
-    prior_window_start = target_date - timedelta(days=13)
-    prior_window_end = target_date - timedelta(days=6)
-    prior_window_records = fetch_enriched_full_text_range(supabase, prior_window_start, prior_window_end)
-    prior_window_ai = [r for r in prior_window_records if r.get("has_ai_requirement")]
+    # Direction: compare against the snapshot from exactly 7 days ago.
+    # This gives a true week-over-week delta instead of a first-seen window comparison.
+    prev_week_date = target_date - timedelta(days=7)
+    prev_snap_resp = (
+        supabase.table("daily_snapshots")
+        .select("top_employers_ai_skills")
+        .eq("snapshot_date", str(prev_week_date))
+        .execute()
+    )
+    prev_totals: dict[str, int] = {}
+    prev_ai_counts: dict[str, int] = {}
+    if prev_snap_resp.data:
+        prev_data = prev_snap_resp.data[0].get("top_employers_ai_skills") or {}
+        for c in prev_data.get("companies") or []:
+            prev_totals[c["company"]] = c["total_count"]
+            prev_ai_counts[c["company"]] = c.get("ai_count", 0)
 
-    current_total = count_companies(seven_day_records)
-    current_ai = count_companies(seven_day_ai)
-    prior_total = count_companies(prior_window_records)
-    prior_ai = count_companies(prior_window_ai)
-    # Rank by total PM openings; AI-requiring subset shown as share within bar.
+    current_total = count_companies(active_records)
+    current_ai = count_companies(active_ai)
     top_10_companies = sorted(current_total.items(), key=lambda x: x[1], reverse=True)[:10]
 
     top_employers_ai_skills = {
@@ -334,9 +381,9 @@ def main():
                 "ai_count": current_ai.get(company, 0),
                 "count": current_ai.get(company, 0),  # backward compat
                 "ai_pct": round(current_ai.get(company, 0) / total_count * 100) if total_count > 0 else 0,
-                "prev_total_count": prior_total.get(company, 0),
-                "prev_count": prior_ai.get(company, 0),
-                "direction": company_direction(total_count, prior_total.get(company, 0)),
+                "prev_total_count": prev_totals.get(company, 0),
+                "prev_count": prev_ai_counts.get(company, 0),
+                "direction": company_direction(total_count, prev_totals.get(company, 0)),
             }
             for i, (company, total_count) in enumerate(top_10_companies)
         ],
