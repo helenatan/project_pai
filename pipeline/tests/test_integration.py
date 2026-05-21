@@ -28,8 +28,10 @@ def make_raw_posting(
     has_ai_language: bool,
     posted_date: date = None,
     source_id: str = None,
+    run_date: date = None,
 ) -> dict:
     posted_date = posted_date or TARGET_DATE
+    run_date = run_date or TARGET_DATE
     ai_desc = "Experience with LLM, prompt engineering, and generative AI required." if has_ai_language else ""
     return {
         "id": str(uuid.uuid4()),
@@ -37,6 +39,7 @@ def make_raw_posting(
         "source_id": source_id or str(uuid.uuid4()),
         "title": title,
         "company": company,
+        "run_date": str(run_date),
         "location": "New York, NY",
         "posted_date": str(posted_date),
         "description_text": f"Lead product strategy for our platform. {ai_desc}",
@@ -200,3 +203,10 @@ def test_full_pipeline_against_fixture(supabase):
     # JSearch has 10 AI + 5 non-AI = 15 total, with 1 dup → 14 distinct
     # AI rate = at most 9/14 * 100 (deduped)
     assert 0 < snapshot["ai_penetration_rate"] <= 100
+
+    # new_postings_today: deduplicated count of jobs first seen on TARGET_DATE
+    # across all sources. 30 fixtures, all with run_date=TARGET_DATE; the
+    # "Senior Product Manager / Stripe, Inc." hash appears 3x (2 jsearch +
+    # 1 adzuna) → 28 distinct first-seen-today jobs.
+    assert snapshot["new_postings_today"] is not None
+    assert 0 < snapshot["new_postings_today"] <= 28
