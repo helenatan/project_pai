@@ -217,6 +217,15 @@ def fetch_source(
             else:
                 raise ValueError(f"Unknown source: {source}")
 
+            # A curated employer board returning zero jobs is almost always a
+            # transient API glitch, not reality. Treat it as a failure so the
+            # board's last_seen_date is left untouched (jobs keep their prior
+            # value and ride out the 7-day window) and the error is visible in
+            # fetch_log / data_quality_status instead of silently zeroing the
+            # company in the next aggregate run.
+            if not jobs:
+                raise ValueError(f"{slug} returned 0 jobs -- treating as a fetch failure")
+
             pm_jobs = [j for j in jobs if is_pm_title(j.get("title", ""))]
             log.info(f"  {company} ({slug}): {len(jobs)} total, {len(pm_jobs)} PM")
 

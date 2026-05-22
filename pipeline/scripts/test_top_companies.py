@@ -44,7 +44,6 @@ sys.path.insert(0, str(_SCRIPTS))
 from fetch_employers import (
     fetch_ashby_board,
     fetch_greenhouse_board,
-    fetch_lever_board,
     is_pm_title,
     load_boards,
 )
@@ -83,18 +82,13 @@ def fetch_live_pm_count(
     """
     if ats == "greenhouse":
         jobs = fetch_greenhouse_board(session, slug)
-        title_key = "title"
     elif ats == "ashby":
         jobs = fetch_ashby_board(session, slug)
-        title_key = "title"
-    elif ats == "lever":
-        jobs = fetch_lever_board(session, slug)
-        title_key = "text"
     else:
         raise ValueError(f"Unknown ATS: {ats}")
 
-    pm_jobs = [j for j in jobs if is_pm_title(j.get(title_key, ""))]
-    sample = [j.get(title_key, "") for j in pm_jobs[:4]]
+    pm_jobs = [j for j in jobs if is_pm_title(j.get("title", ""))]
+    sample = [j.get("title", "") for j in pm_jobs[:4]]
     return len(pm_jobs), sample
 
 
