@@ -7,6 +7,7 @@ import HeroMetrics from './components/HeroMetrics'
 import VolumeChart from './components/VolumeChart'
 import SkillsPanel from './components/SkillsPanel'
 import CompaniesPanel from './components/CompaniesPanel'
+import AICompaniesPanel from './components/AICompaniesPanel'
 import Footer from './components/Footer'
 
 const COLUMNS = [
@@ -82,6 +83,7 @@ export default function App() {
       <VolumeChart snapshots={snapshots} />
       <CompaniesPanel snapshot={today} />
       <SkillsPanel snapshot={today} />
+      <AICompaniesPanel snapshot={today} />
       <Footer snapshot={today} dayN={dayN} />
     </div>
   )
