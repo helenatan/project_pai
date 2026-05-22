@@ -255,6 +255,64 @@ def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list
     )
 
 
+def compute_total_active_pm(supabase: Client, target_date: date, version: str) -> int:
+    """Count distinct active PM openings across all sources as of target_date.
+
+    Employer boards (Greenhouse/Ashby/Lever) are re-scraped daily, so a job is
+    active if last_seen_date is within 7 days, or if it was newly scraped this
+    week (last_seen_date IS NULL and posted_date within 7 days).
+
+    Feeds (Adzuna/JSearch) are point-in-time; PM jobs posted within 30 days are
+    assumed still open (typical PM posting duration).
+
+    Results are restricted to PM-titled roles (normalized_title != 'Other') and
+    deduplicated by dedup_hash so the same opening fetched from multiple sources
+    is counted once.
+    """
+    board_since = str(target_date - timedelta(days=6))   # 7-day window
+    feed_since  = str(target_date - timedelta(days=29))  # 30-day window
+
+    confirmed_board = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .in_("source", EMPLOYER_SOURCES)
+        .gte("last_seen_date", board_since)
+        .order("id")
+    )
+    new_board = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .in_("source", EMPLOYER_SOURCES)
+        .is_("last_seen_date", "null")
+        .gte("posted_date", board_since)
+        .order("id")
+    )
+    feed_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .in_("source", FEED_SOURCES)
+        .gte("posted_date", feed_since)
+        .order("id")
+    )
+
+    all_ids = list({r["id"] for r in confirmed_board + new_board + feed_rows})
+    if not all_ids:
+        return 0
+
+    enriched = _batched_in(
+        supabase,
+        "job_postings_enriched",
+        "dedup_hash,normalized_title",
+        all_ids,
+        extra_eq=(("pipeline_version", version),),
+    )
+    return len({
+        r["dedup_hash"]
+        for r in enriched
+        if r.get("dedup_hash") and r.get("normalized_title") != "Other"
+    })
+
+
 def fetch_all_full_text_enriched(supabase: Client, version: str) -> list[dict]:
     """Every enriched record from full-text sources, all-time (not one day).
 
@@ -392,8 +450,13 @@ def main():
     log.info(f"data_quality_status={data_quality_status}")
 
     # ── 1. VOLUME ────────────────────────────────────────────────────────────────
-    # total_postings: Adzuna's live count of all currently-active PM listings.
-    total_postings = adzuna_log["adzuna_total_count"] if adzuna_log else None
+    # total_postings: distinct active PM openings across all sources, deduped by
+    # (company, title). Employer boards use a 7-day last_seen_date window;
+    # feeds use a 30-day posted_date window (typical PM job posting duration).
+    # This replaces the old Adzuna raw count which over-counted by ~23x due to
+    # broad keyword matching in job descriptions rather than titles.
+    total_postings = compute_total_active_pm(supabase, target_date, PIPELINE_VERSION)
+    log.info(f"total_active_pm_postings (all sources, deduped)={total_postings}")
     # new_postings_today: deduplicated count of jobs first ingested on
     # target_date across all sources (see new_jobs_on() in migration 004).
     new_jobs_resp = supabase.rpc(
