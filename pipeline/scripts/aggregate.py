@@ -205,17 +205,30 @@ def count_companies(records: list[dict]) -> dict[str, int]:
 def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list[dict]:
     """All US PM postings active within the last 7 days, across every source.
 
-    Employer boards are re-scraped daily, so they are filtered by last_seen_date
-    (stable long-running roles stay counted, filled roles age out within a week).
+    Employer boards are re-scraped daily; a job is considered active if it was
+    last confirmed in the window (last_seen_date >= since) OR was newly scraped
+    in the window but not yet re-confirmed (last_seen_date IS NULL and
+    posted_date >= since). The is_us filter is applied only to confirmed-active
+    records because newly scraped records may not have is_us set yet.
+
     Feed sources (Adzuna, JSearch) are fetched once and never re-checked, so they
     are filtered by posted_date instead.
     """
-    board_rows = fetch_all_rows(
+    # Confirmed active: last_seen_date in window (is_us already reliable here)
+    confirmed_board = fetch_all_rows(
         lambda: supabase.table("job_postings_raw")
         .select("id")
         .gte("last_seen_date", str(since))
         .in_("source", EMPLOYER_SOURCES)
-        .eq("is_us", True)
+        .order("id")
+    )
+    # Newly scraped: last_seen_date NULL, posted in window
+    new_board = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .is_("last_seen_date", "null")
+        .gte("posted_date", str(since))
+        .in_("source", EMPLOYER_SOURCES)
         .order("id")
     )
     feed_rows = fetch_all_rows(
@@ -225,7 +238,12 @@ def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list
         .in_("source", FEED_SOURCES)
         .order("id")
     )
-    raw_ids = [r["id"] for r in board_rows] + [r["id"] for r in feed_rows]
+    seen_ids: set = set()
+    raw_ids = []
+    for r in confirmed_board + new_board + feed_rows:
+        if r["id"] not in seen_ids:
+            seen_ids.add(r["id"])
+            raw_ids.append(r["id"])
     if not raw_ids:
         return []
     return _batched_in(
