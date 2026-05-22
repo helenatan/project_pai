@@ -82,8 +82,8 @@ export default function App() {
       <HeroMetrics snapshot={today} />
       <VolumeChart snapshots={snapshots} />
       <AIPenetrationChart snapshots={snapshots} />
-      <SkillsPanel snapshot={today} />
       <CompaniesPanel snapshot={today} />
+      <SkillsPanel snapshot={today} />
       <Footer snapshot={today} dayN={dayN} />
     </div>
   )
