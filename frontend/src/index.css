@@ -217,25 +217,32 @@ body::before {
 .domain-count-label { font-family: 'DM Mono', monospace; font-size: 0.52rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin-top: 2px; }
 .domain-def { font-family: 'Lora', serif; font-size: 0.82rem; line-height: 1.6; color: var(--ink-light); font-style: italic; }
 .domain-rule { border: none; border-top: 1px solid var(--paper-rule); margin: 0.85rem 0 0.8rem; }
-.domain-tracked { margin-top: 0.85rem; }
-.tracked-label, .nodata-label {
+.nodata-label {
   display: block;
   font-family: 'DM Mono', monospace;
   font-size: 0.6rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  margin-bottom: 0.5rem;
 }
-.kw-pills { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.kw-pill {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem;
-  padding: 0.2rem 0.5rem;
-  background: var(--paper-dark);
+.domain-quotebox {
+  border-left: 2px solid var(--signal-amber);
+  padding-left: 0.8rem;
+  margin-top: auto;
+}
+.domain-quote {
+  font-family: 'Lora', serif;
+  font-size: 0.82rem;
+  line-height: 1.6;
   color: var(--ink-mid);
-  border: 1px solid var(--paper-rule);
-  letter-spacing: 0.04em;
+  font-style: italic;
+}
+.domain-quote-cite {
+  font-family: 'Lora', serif;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--signal-amber);
+  margin-top: 0.35rem;
 }
 
 /* ── FOOTER ── */
