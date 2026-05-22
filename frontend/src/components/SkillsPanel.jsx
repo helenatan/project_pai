@@ -1,4 +1,6 @@
 // AI Skills by Domain — the 7 tracked categories from the ai_keywords taxonomy.
+// Counts and quotes come live from snapshot.top_ai_skills.domains, computed
+// over active US PM postings that require AI (see pipeline/scripts/aggregate.py).
 const DOMAINS = [
   {
     slug: 'model_fluency',
@@ -37,28 +39,19 @@ const DOMAINS = [
   },
 ]
 
-function fmtEst(n) {
-  if (n == null) return null
-  return `~${Math.round(n).toLocaleString()}`
-}
-
-function DomainCard({ domain, domainData, scaleFactor, wide }) {
-  const rawCount = domainData?.count ?? 0
-  const domainEst = scaleFactor != null && rawCount > 0
-    ? fmtEst(rawCount * scaleFactor)
-    : rawCount > 0 ? String(rawCount) : null
-
+function DomainCard({ domain, domainData, wide }) {
+  const count = domainData?.count ?? 0
   const quote = domainData?.quote || null
   const company = domainData?.company || null
-  const hasSignal = rawCount > 0
+  const hasSignal = count > 0
 
   return (
     <div className={`domain-card${wide ? ' domain-card-wide' : ''}`}>
       <div className="domain-header">
         <h3 className="domain-name">{domain.name}</h3>
-        {domainEst != null && (
+        {hasSignal && (
           <div className="domain-count-block">
-            <div className="domain-count-num">{domainEst}</div>
+            <div className="domain-count-num">{count.toLocaleString()}</div>
             <div className="domain-count-label">postings</div>
           </div>
         )}
@@ -87,67 +80,39 @@ function DomainCard({ domain, domainData, scaleFactor, wide }) {
 }
 
 export default function SkillsPanel({ snapshot }) {
-  const domainQuotes = snapshot?.top_ai_skills?.domain_quotes || []
-  const quotesMap = Object.fromEntries(domainQuotes.map((d) => [d.slug, d]))
-
-  // Fall back to keyword-level signal count if domain_quotes not yet populated
-  const skills = snapshot?.top_ai_skills?.skills || []
-  const countByKeyword = Object.fromEntries(skills.map((s) => [s.keyword, s.count]))
-  const FALLBACK_KWS = DOMAINS.flatMap((d) => {
-    // rough fallback: map slug back to a known keyword
-    const map = {
-      model_fluency: ['llm', 'large language model', 'generative ai', 'machine learning'],
-      ai_building: ['prompt engineering', 'rag', 'embeddings'],
-      agentic_systems: ['agentic', 'ai agent'],
-      evals: ['ai evaluation', 'hallucination'],
-      ai_safety: ['ai safety', 'responsible ai'],
-      ai_deployment: ['mlops', 'ai platform'],
-      ai_product_vision: ['ai strategy', 'ai roadmap'],
-    }
-    return (map[d.slug] || []).map((kw) => ({ slug: d.slug, kw }))
-  })
-
-  const withSignal = domainQuotes.length > 0
-    ? domainQuotes.filter((d) => d.count > 0).length
-    : DOMAINS.filter((d) =>
-        FALLBACK_KWS.filter((x) => x.slug === d.slug).some((x) => (countByKeyword[x.kw] || 0) > 0)
-      ).length
-
-  // Scale raw sample counts up to estimated active-market total
-  const sampleAiCount = snapshot?.top_ai_skills?.total_ai_postings_today
-  const estimatedAiTotal = snapshot?.total_postings != null && snapshot?.ai_penetration_rate != null
-    ? Math.round(snapshot.total_postings * snapshot.ai_penetration_rate / 100)
-    : null
-  const scaleFactor = estimatedAiTotal != null && sampleAiCount > 0
-    ? estimatedAiTotal / sampleAiCount
-    : null
+  const tas = snapshot?.top_ai_skills || {}
+  const domains = tas.domains || []
+  const dataMap = Object.fromEntries(domains.map((d) => [d.slug, d]))
+  const activeAiTotal = tas.active_ai_total ?? null
+  const withSignal = domains.filter((d) => (d.count || 0) > 0).length
 
   // Rank cards by posting count — most in-demand domains first.
   // Stable sort keeps the declared DOMAINS order for ties (incl. zero-signal).
   const orderedDomains = [...DOMAINS].sort(
-    (a, b) => (quotesMap[b.slug]?.count ?? 0) - (quotesMap[a.slug]?.count ?? 0)
+    (a, b) => (dataMap[b.slug]?.count ?? 0) - (dataMap[a.slug]?.count ?? 0)
   )
 
   return (
     <section>
       <div className="section-header">
         <span className="section-title">III. AI Skills by Domain</span>
-        <span className="section-meta">7 tracked categories</span>
+        <span className="section-meta">7 categories · ranked by demand</span>
       </div>
       <p className="domain-intro">
-        PM job descriptions reveal which AI competencies employers actually require.
-        {' '}{withSignal} of 7 categories show signal in the latest snapshot
-        {estimatedAiTotal != null
-          ? ` (~${estimatedAiTotal.toLocaleString()} active openings estimated to mention AI skills)`
-          : ''}; the rest are tracked and will build signal as more data accumulates.
+        How often each AI competency appears across
+        {activeAiTotal != null ? ` ${activeAiTotal.toLocaleString()} ` : ' '}
+        active US PM postings that require AI skills. A posting can span several
+        domains, so counts overlap and aren&rsquo;t expected to sum.
+        {withSignal > 0 && withSignal < 7
+          ? ` ${withSignal} of 7 categories show signal so far; the rest are tracked as more data accumulates.`
+          : ''}
       </p>
       <div className="domain-grid">
         {orderedDomains.map((d, i) => (
           <DomainCard
             key={d.slug}
             domain={d}
-            domainData={quotesMap[d.slug]}
-            scaleFactor={scaleFactor}
+            domainData={dataMap[d.slug]}
             wide={i === orderedDomains.length - 1}
           />
         ))}

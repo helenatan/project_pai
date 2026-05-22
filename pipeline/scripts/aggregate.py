@@ -211,24 +211,27 @@ def fetch_active_employer_records(supabase: Client, since: date, version: str) -
     )
 
 
-# Domain keyword groups — mirrors frontend/src/components/SkillsPanel.jsx DOMAINS
-DOMAIN_KEYWORDS: dict[str, list[str]] = {
-    "model_fluency":     ["large language model", "llm", "generative ai", "gen ai",
-                          "foundation model", "foundation models", "multimodal",
-                          "machine learning", "natural language processing", "nlp", "computer vision"],
-    "ai_building":       ["prompt engineering", "context window", "retrieval augmented generation",
-                          "rag", "fine-tuning", "fine tuning", "embeddings",
-                          "vector database", "vector search", "conversational ai"],
-    "agentic_systems":   ["agentic", "agentic ai", "ai agent", "ai agents", "multi-agent",
-                          "agentic workflows", "agent orchestration", "tool use"],
-    "evals":             ["ai evaluation", "ai evals", "model evaluation", "evaluation framework",
-                          "hallucination", "human in the loop", "human-in-the-loop", "ai product metrics"],
-    "ai_safety":         ["responsible ai", "ai safety", "ai governance", "ai ethics",
-                          "trust and safety", "red teaming", "ai bias", "guardrails"],
-    "ai_deployment":     ["ai platform", "ai infrastructure", "mlops", "ml ops", "llmops",
-                          "ai workflows", "ai automation", "intelligent automation"],
-    "ai_product_vision": ["ai product strategy", "ai strategy", "ai roadmap"],
-}
+def fetch_domain_keywords(supabase: Client) -> dict[str, list[str]]:
+    """Build the domain → keyword map from the ai_keywords table.
+
+    This is the single source of truth for the AI taxonomy: enrich.py reads
+    the same table to tag postings, so the domain grouping here can never
+    drift from the keywords actually matched against job descriptions.
+    """
+    rows = (
+        supabase.table("ai_keywords")
+        .select("keyword,category")
+        .eq("is_active", True)
+        .execute()
+        .data
+    )
+    out: dict[str, list[str]] = {}
+    for r in rows:
+        category = r.get("category")
+        keyword = r.get("keyword")
+        if category and keyword:
+            out.setdefault(category, []).append(keyword)
+    return out
 
 
 def extract_quote_snippet(description: str, keywords: list[str], max_len: int = 240) -> Optional[str]:
@@ -413,50 +416,6 @@ def main():
         ],
     }
 
-    # ── 4b. DOMAIN-LEVEL COUNTS AND SAMPLE QUOTES ──────────────────────────────
-    # For each of the 7 tracked domains, count how many of today's AI postings
-    # mention at least one domain keyword, then pull one representative quote
-    # from the matching posting's description_text.
-    domain_sample_ids: dict[str, int] = {}
-    domain_counts: dict[str, int] = {}
-    used_raw_ids: set = set()
-    for slug, keywords in DOMAIN_KEYWORDS.items():
-        kw_set = set(keywords)
-        matching = [
-            r for r in todays_ai_records
-            if kw_set & set(r.get("ai_keyword_matches") or [])
-        ]
-        domain_counts[slug] = len(matching)
-        if matching:
-            # Prefer a posting not already quoted by another domain, for variety
-            pick = next((r for r in matching if r["raw_id"] not in used_raw_ids), matching[0])
-            domain_sample_ids[slug] = pick["raw_id"]
-            used_raw_ids.add(pick["raw_id"])
-
-    # Batch-fetch description_text + company for one sample posting per domain
-    all_sample_raw_ids = list(set(domain_sample_ids.values()))
-    desc_by_raw_id: dict[int, dict] = {}
-    if all_sample_raw_ids:
-        raw_rows = _batched_in(
-            supabase, "job_postings_raw", "id,company,description_text", all_sample_raw_ids
-        )
-        for row in raw_rows:
-            desc_by_raw_id[row["id"]] = row
-
-    domain_quotes = []
-    for slug, keywords in DOMAIN_KEYWORDS.items():
-        raw_id = domain_sample_ids.get(slug)
-        raw = desc_by_raw_id.get(raw_id) if raw_id else None
-        domain_quotes.append({
-            "slug":    slug,
-            "count":   domain_counts.get(slug, 0),
-            "quote":   extract_quote_snippet(raw.get("description_text") or "", keywords) if raw else None,
-            "company": (raw.get("company") or None) if raw else None,
-        })
-
-    top_ai_skills["domain_quotes"] = domain_quotes
-    log.info(f"Domain quotes computed for {sum(1 for d in domain_quotes if d['quote'])} of {len(domain_quotes)} domains")
-
     # ── 5. TOP 10 COMPANIES ──────────────────────────────────────────────────────
     # Count US PM openings that were still live on each employer board within
     # the past 7 days (last_seen_date >= today - 6). This correctly handles:
@@ -506,6 +465,58 @@ def main():
             for i, (company, total_count) in enumerate(top_10_companies)
         ],
     }
+
+    # ── 5b. AI SKILLS BY DOMAIN ──────────────────────────────────────────────────
+    # Count active US PM postings (per raw_id, consistent with the company
+    # count) that mention each domain's keywords. Measured over exactly the
+    # same active employer-board population as Top Companies above — no daily
+    # sampling, no extrapolation. One representative quote is attached per
+    # domain from a matching posting's description_text.
+    domain_keywords = fetch_domain_keywords(supabase)
+    domain_sample_ids: dict[str, int] = {}
+    domain_counts: dict[str, int] = {}
+    used_raw_ids: set = set()
+    for slug, keywords in domain_keywords.items():
+        kw_set = set(keywords)
+        matching = [
+            r for r in active_ai
+            if kw_set & set(r.get("ai_keyword_matches") or [])
+        ]
+        domain_counts[slug] = len(matching)
+        if matching:
+            # Prefer a posting not already quoted by another domain, for variety
+            pick = next((r for r in matching if r["raw_id"] not in used_raw_ids), matching[0])
+            domain_sample_ids[slug] = pick["raw_id"]
+            used_raw_ids.add(pick["raw_id"])
+
+    # Batch-fetch description_text + company for one sample posting per domain
+    all_sample_raw_ids = list(set(domain_sample_ids.values()))
+    desc_by_raw_id: dict[int, dict] = {}
+    if all_sample_raw_ids:
+        raw_rows = _batched_in(
+            supabase, "job_postings_raw", "id,company,description_text", all_sample_raw_ids
+        )
+        for row in raw_rows:
+            desc_by_raw_id[row["id"]] = row
+
+    domain_items = []
+    for slug, keywords in domain_keywords.items():
+        raw_id = domain_sample_ids.get(slug)
+        raw = desc_by_raw_id.get(raw_id) if raw_id else None
+        domain_items.append({
+            "slug":    slug,
+            "count":   domain_counts.get(slug, 0),
+            "quote":   extract_quote_snippet(raw.get("description_text") or "", keywords) if raw else None,
+            "company": (raw.get("company") or None) if raw else None,
+        })
+    domain_items.sort(key=lambda d: d["count"], reverse=True)
+
+    top_ai_skills["domains"] = domain_items
+    top_ai_skills["active_ai_total"] = len(active_ai)
+    log.info(
+        f"AI skill domains: {sum(1 for d in domain_items if d['count'] > 0)}/{len(domain_items)} "
+        f"with signal across {len(active_ai)} active AI postings"
+    )
 
     # ── 6. DEDUP QUALITY ─────────────────────────────────────────────────────────
     all_raw_today = fetch_all_rows(
