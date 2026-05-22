@@ -217,7 +217,7 @@ def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list
     return _batched_in(
         supabase,
         "job_postings_enriched",
-        "raw_id,dedup_hash,company_normalized",
+        "raw_id,dedup_hash,company_normalized,has_ai_requirement",
         raw_ids,
         extra_eq=(("pipeline_version", version),),
     )
@@ -574,22 +574,18 @@ def main():
     top_ai_skills["full_text_ai_total"] = len(ft_ai)
     top_ai_skills["full_text_ai_rate"] = ft_ai_rate
 
-    # Top companies by AI-requiring PM postings (full-text, all-time, deduped by hash).
-    ai_co_keys: dict[str, set] = {}
-    for r in ft_ai:
-        company = r.get("company_normalized") or ""
-        if not company:
-            continue
-        ai_co_keys.setdefault(company, set()).add(r.get("dedup_hash") or r.get("raw_id"))
-    top_ai_companies = sorted(
-        [(c, len(keys)) for c, keys in ai_co_keys.items()],
-        key=lambda x: x[1],
-        reverse=True,
+    # Top companies by AI-requiring PM openings — same active 7-day window as
+    # Section II, filtered to postings where has_ai_requirement is True.
+    ai_active_records = [r for r in active_pm_records if r.get("has_ai_requirement")]
+    ai_active_counts = count_companies(ai_active_records)
+    top_10_ai_companies = sorted(
+        ai_active_counts.items(), key=lambda x: x[1], reverse=True
     )[:10]
     top_ai_skills["top_ai_employers"] = [
         {"rank": i + 1, "company": company, "count": count}
-        for i, (company, count) in enumerate(top_ai_companies)
+        for i, (company, count) in enumerate(top_10_ai_companies)
     ]
+    top_ai_skills["top_ai_employers_window_end"] = str(target_date)
     log.info(
         f"AI skills: {ft_total} full-text postings, {len(ft_ai)} require AI "
         f"({ft_ai_rate}%); {sum(1 for d in domain_items if d['count'] > 0)}/{len(domain_items)} domains with signal"
