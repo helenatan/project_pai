@@ -81,7 +81,7 @@ function DomainCard({ domain, domainData, wide }) {
 
 export default function SkillsPanel({ snapshot }) {
   const tas = snapshot?.top_ai_skills || {}
-  const domains = tas.domains || []
+  const domains = tas.domains || tas.domain_quotes || []
   const dataMap = Object.fromEntries(domains.map((d) => [d.slug, d]))
   const ftTotal = tas.full_text_total ?? null
   const ftAiTotal = tas.full_text_ai_total ?? null
