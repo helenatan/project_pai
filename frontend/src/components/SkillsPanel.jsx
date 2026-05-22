@@ -72,9 +72,22 @@ function DomainCard({ domain, countByKeyword, scaleFactor, wide }) {
   const shownKws = new Set(shown.map((x) => x.kw))
   const rest = domain.keywords.filter((kw) => !shownKws.has(kw))
 
+  // Domain-level count: top keyword count × scaleFactor as a market-size proxy
+  const domainEst = scaleFactor != null && topCount > 0
+    ? fmtEst(topCount * scaleFactor)
+    : topCount > 0 ? String(topCount) : null
+
   return (
     <div className={`domain-card${wide ? ' domain-card-wide' : ''}`}>
-      <h3 className="domain-name">{domain.name}</h3>
+      <div className="domain-header">
+        <h3 className="domain-name">{domain.name}</h3>
+        {domainEst != null && (
+          <div className="domain-count-block">
+            <div className="domain-count-num">{domainEst}</div>
+            <div className="domain-count-label">postings</div>
+          </div>
+        )}
+      </div>
       <p className="domain-def">{domain.def}</p>
       <hr className="domain-rule" />
       {withData.length > 0 ? (
