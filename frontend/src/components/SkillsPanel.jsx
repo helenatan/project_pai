@@ -95,7 +95,7 @@ export default function SkillsPanel({ snapshot }) {
   return (
     <section>
       <div className="section-header">
-        <span className="section-title">III. AI Skills by Domain</span>
+        <span className="section-title">IV. AI Skills by Domain</span>
         <span className="section-meta">7 categories · ranked by demand</span>
       </div>
       <p className="domain-intro">

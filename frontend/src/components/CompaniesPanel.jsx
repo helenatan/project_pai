@@ -45,7 +45,7 @@ export default function CompaniesPanel({ snapshot }) {
   return (
     <section className="count-bar-section">
       <div className="section-header">
-        <span className="section-title">IV. Top Companies Hiring PMs</span>
+        <span className="section-title">III. Top Companies Hiring PMs</span>
         <span className="section-meta">
           Window ending {data.window_end} · ranked by total PM openings
         </span>

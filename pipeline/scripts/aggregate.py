@@ -473,21 +473,39 @@ def main():
     # sampling, no extrapolation. One representative quote is attached per
     # domain from a matching posting's description_text.
     domain_keywords = fetch_domain_keywords(supabase)
-    domain_sample_ids: dict[str, int] = {}
+    domain_matches: dict[str, list] = {}
     domain_counts: dict[str, int] = {}
-    used_raw_ids: set = set()
     for slug, keywords in domain_keywords.items():
         kw_set = set(keywords)
         matching = [
             r for r in active_ai
             if kw_set & set(r.get("ai_keyword_matches") or [])
         ]
+        domain_matches[slug] = matching
         domain_counts[slug] = len(matching)
-        if matching:
-            # Prefer a posting not already quoted by another domain, for variety
-            pick = next((r for r in matching if r["raw_id"] not in used_raw_ids), matching[0])
-            domain_sample_ids[slug] = pick["raw_id"]
-            used_raw_ids.add(pick["raw_id"])
+
+    # Pick one sample posting per domain for its quote. Process the most
+    # constrained domains (fewest matching postings) first, and prefer a
+    # posting from a company not yet quoted — so the cards spread across
+    # companies for visual variety where the data allows.
+    domain_sample_ids: dict[str, int] = {}
+    used_raw_ids: set = set()
+    used_companies: set = set()
+    for slug in sorted(domain_matches, key=lambda s: domain_counts[s]):
+        matching = domain_matches[slug]
+        if not matching:
+            continue
+        pick = (
+            next((r for r in matching
+                  if (r.get("company_normalized") or "") not in used_companies), None)
+            or next((r for r in matching if r["raw_id"] not in used_raw_ids), None)
+            or matching[0]
+        )
+        domain_sample_ids[slug] = pick["raw_id"]
+        used_raw_ids.add(pick["raw_id"])
+        company = pick.get("company_normalized") or ""
+        if company:
+            used_companies.add(company)
 
     # Batch-fetch description_text + company for one sample posting per domain
     all_sample_raw_ids = list(set(domain_sample_ids.values()))
