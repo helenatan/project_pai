@@ -10,6 +10,10 @@
   .wrap { max-width:860px; margin:0 auto; padding:1.5rem 1.15rem 4rem; }
   .banner { font-family:'DM Mono',ui-monospace,monospace; font-size:0.6rem; letter-spacing:.12em; text-transform:uppercase; color:#a06010; font-weight:700; margin-bottom:1rem; }
 
+  .warn { background:#fdf6ec; border:1px solid #e8d4b0; border-left:3px solid #c08a2e; border-radius:0 5px 5px 0; padding:0.7rem 0.9rem; margin-bottom:1.5rem; }
+  .warn p { font-family:'Lora',Georgia,serif; font-size:0.76rem; line-height:1.55; color:#7a5a1e; margin:0; }
+  .warn strong { color:#a06010; }
+
   .section-header { display:flex; justify-content:space-between; align-items:baseline; padding:0.4rem 0 0.6rem; border-bottom:1px solid #1c1917; gap:0.4rem 1rem; flex-wrap:wrap; }
   .section-title { font-family:'Playfair Display',Georgia,serif; font-size:1.15rem; font-weight:600; }
   .section-meta { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:.07em; text-transform:uppercase; color:#6b6560; }
@@ -19,7 +23,6 @@
   .a-card { border:1px solid #e6e0d6; border-radius:6px; padding:1.05rem 1.15rem; background:#fff; display:flex; flex-direction:column; }
   .a-top { display:flex; justify-content:space-between; align-items:baseline; gap:0.7rem; }
   .a-name { font-family:'Playfair Display',Georgia,serif; font-size:1rem; font-weight:600; }
-  .a-name .new { font-family:'DM Mono',monospace; font-size:0.5rem; font-weight:700; letter-spacing:.08em; color:#fff; background:#a06010; padding:0.12rem 0.3rem; border-radius:2px; vertical-align:middle; margin-left:0.35rem; }
   .a-count { text-align:right; white-space:nowrap; }
   .a-count b { font-family:'DM Mono',monospace; font-size:1.02rem; font-weight:700; color:#a06010; }
   .a-count small { font-family:'DM Mono',monospace; font-size:0.52rem; letter-spacing:.07em; text-transform:uppercase; color:#a89f93; display:block; }
@@ -27,6 +30,7 @@
   .a-quotebox { border-left:2px solid #a06010; padding-left:0.75rem; margin-top:auto; }
   .a-quote { font-family:'Lora',Georgia,serif; font-size:0.82rem; line-height:1.55; color:#3d3830; }
   .a-cite { font-family:'Lora',Georgia,serif; font-size:0.73rem; font-style:italic; color:#a06010; margin-top:0.4rem; }
+  .a-cite .ph { font-family:'DM Mono',monospace; font-style:normal; font-size:0.5rem; letter-spacing:.06em; text-transform:uppercase; color:#bfb6a8; }
 
   @media (max-width:680px) {
     .a-grid { grid-template-columns:1fr; }
@@ -36,10 +40,18 @@
 <body>
 <div class="wrap">
   <div class="banner">Option A · AI Skills by Domain</div>
+
+  <div class="warn">
+    <p><strong>Illustrative mock.</strong> The quotes and company names below are
+    placeholder examples written to show the layout — they are <strong>not real postings</strong>.
+    The live version will extract a verbatim quote and the real employer from each posting
+    in the database.</p>
+  </div>
+
   <section>
     <div class="section-header">
       <span class="section-title">III. AI Skills by Domain</span>
-      <span class="section-meta">8 domains · ranked by demand</span>
+      <span class="section-meta">7 domains · ranked by demand</span>
     </div>
     <p class="intro">
       How often each AI competency appears in PM job descriptions. A posting can require
@@ -59,13 +71,9 @@ const domains = [
     ability:'design products where AI takes multi-step actions autonomously.',
     quote:'Experience designing agentic workflows where the model plans and executes multi-step tasks with minimal human oversight.',
     cite:'Sierra — Product Manager, Agents' },
-  { name:'Applied AI Products', count:16200, isNew:true,
-    ability:'take an AI capability from prototype to a shipped product feature.',
-    quote:"Track record shipping AI-powered features in a consumer product — you've taken an AI capability from prototype to production.",
-    cite:'Notion — Senior Product Manager' },
-  { name:'AI Deployment', count:9300,
-    ability:'own AI systems in production at scale.',
-    quote:'Own AI systems in production — accountable for latency, inference cost, and reliability as we scale to millions of users.',
+  { name:'AI Deployment', count:22400,
+    ability:'ship AI-powered features and run them reliably in production at scale.',
+    quote:"You'll take AI features from prototype to production and own them once they're live — accountable for latency, inference cost, and reliability at scale.",
     cite:'Databricks — Product Manager, AI Platform' },
   { name:'AI Building Blocks', count:4100,
     ability:'understand and spec the technical components that power AI features.',
@@ -89,13 +97,13 @@ const fmt = n => '~' + n.toLocaleString();
 document.getElementById('render').innerHTML = domains.map(d => `
   <div class="a-card">
     <div class="a-top">
-      <span class="a-name">${d.name}${d.isNew ? '<span class="new">New</span>' : ''}</span>
+      <span class="a-name">${d.name}</span>
       <span class="a-count"><b>${fmt(d.count)}</b><small>postings</small></span>
     </div>
     <p class="a-ability">The ability to ${d.ability}</p>
     <div class="a-quotebox">
       <div class="a-quote">&ldquo;${d.quote}&rdquo;</div>
-      <div class="a-cite">— ${d.cite}</div>
+      <div class="a-cite">— ${d.cite} <span class="ph">placeholder</span></div>
     </div>
   </div>`).join('');
 </script>
