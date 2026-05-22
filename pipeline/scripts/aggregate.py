@@ -573,6 +573,23 @@ def main():
     top_ai_skills["full_text_total"] = ft_total
     top_ai_skills["full_text_ai_total"] = len(ft_ai)
     top_ai_skills["full_text_ai_rate"] = ft_ai_rate
+
+    # Top companies by AI-requiring PM postings (full-text, all-time, deduped by hash).
+    ai_co_keys: dict[str, set] = {}
+    for r in ft_ai:
+        company = r.get("company_normalized") or ""
+        if not company:
+            continue
+        ai_co_keys.setdefault(company, set()).add(r.get("dedup_hash") or r.get("raw_id"))
+    top_ai_companies = sorted(
+        [(c, len(keys)) for c, keys in ai_co_keys.items()],
+        key=lambda x: x[1],
+        reverse=True,
+    )[:10]
+    top_ai_skills["top_ai_employers"] = [
+        {"rank": i + 1, "company": company, "count": count}
+        for i, (company, count) in enumerate(top_ai_companies)
+    ]
     log.info(
         f"AI skills: {ft_total} full-text postings, {len(ft_ai)} require AI "
         f"({ft_ai_rate}%); {sum(1 for d in domain_items if d['count'] > 0)}/{len(domain_items)} domains with signal"
