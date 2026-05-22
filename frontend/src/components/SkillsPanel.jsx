@@ -122,6 +122,12 @@ export default function SkillsPanel({ snapshot }) {
     ? estimatedAiTotal / sampleAiCount
     : null
 
+  // Rank cards by posting count — most in-demand domains first.
+  // Stable sort keeps the declared DOMAINS order for ties (incl. zero-signal).
+  const orderedDomains = [...DOMAINS].sort(
+    (a, b) => (quotesMap[b.slug]?.count ?? 0) - (quotesMap[a.slug]?.count ?? 0)
+  )
+
   return (
     <section>
       <div className="section-header">
@@ -136,13 +142,13 @@ export default function SkillsPanel({ snapshot }) {
           : ''}; the rest are tracked and will build signal as more data accumulates.
       </p>
       <div className="domain-grid">
-        {DOMAINS.map((d, i) => (
+        {orderedDomains.map((d, i) => (
           <DomainCard
             key={d.slug}
             domain={d}
             domainData={quotesMap[d.slug]}
             scaleFactor={scaleFactor}
-            wide={i === DOMAINS.length - 1}
+            wide={i === orderedDomains.length - 1}
           />
         ))}
       </div>
