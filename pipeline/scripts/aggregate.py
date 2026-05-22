@@ -26,12 +26,16 @@ SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 PIPELINE_VERSION = "v1.0"
 
 # Sources used for AI signal (full-text descriptions). Adzuna is excluded
-# because its descriptions are truncated.
-FULL_TEXT_SOURCES = ["jsearch", "greenhouse", "ashby"]
+# because its descriptions are truncated to ~500 chars.
+FULL_TEXT_SOURCES = ["jsearch", "greenhouse", "ashby", "lever"]
 
-# Employer-board sources: authoritative, curated company boards.
-# Used for company count (filtered by last_seen_date + is_us, not posted_date).
-EMPLOYER_SOURCES = ["greenhouse", "ashby"]
+# Employer-board sources: authoritative, curated company boards re-scraped
+# daily, so they carry a reliable last_seen_date for active-window filtering.
+EMPLOYER_SOURCES = ["greenhouse", "ashby", "lever"]
+
+# Feed sources: fetched once as new postings, not re-checked — filtered by
+# posted_date rather than last_seen_date.
+FEED_SOURCES = ["adzuna", "jsearch"]
 
 
 def get_supabase() -> Client:
@@ -184,19 +188,51 @@ def count_companies(records: list[dict]) -> dict[str, int]:
     return {company: len(ids) for company, ids in out.items()}
 
 
-def fetch_active_employer_records(supabase: Client, since: date, version: str) -> list[dict]:
-    """US employer-board PM jobs that were still active within the last 7 days.
+def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list[dict]:
+    """All US PM postings active within the last 7 days, across every source.
 
-    Uses last_seen_date (updated every run) instead of posted_date (first-seen,
-    never updated) so stable long-running jobs (e.g. Stripe) are counted and
-    recently-filled jobs age out within one week.
+    Employer boards are re-scraped daily, so they are filtered by last_seen_date
+    (stable long-running roles stay counted, filled roles age out within a week).
+    Feed sources (Adzuna, JSearch) are fetched once and never re-checked, so they
+    are filtered by posted_date instead.
     """
-    raw_rows = fetch_all_rows(
+    board_rows = fetch_all_rows(
         lambda: supabase.table("job_postings_raw")
         .select("id")
         .gte("last_seen_date", str(since))
         .in_("source", EMPLOYER_SOURCES)
         .eq("is_us", True)
+        .order("id")
+    )
+    feed_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .gte("posted_date", str(since))
+        .in_("source", FEED_SOURCES)
+        .order("id")
+    )
+    raw_ids = [r["id"] for r in board_rows] + [r["id"] for r in feed_rows]
+    if not raw_ids:
+        return []
+    return _batched_in(
+        supabase,
+        "job_postings_enriched",
+        "raw_id,dedup_hash,company_normalized",
+        raw_ids,
+        extra_eq=(("pipeline_version", version),),
+    )
+
+
+def fetch_all_full_text_enriched(supabase: Client, version: str) -> list[dict]:
+    """Every enriched record from full-text sources, all-time (not one day).
+
+    This is the corpus the AI Skills section is measured over: all PM postings
+    we hold a complete description for, accumulated since tracking began.
+    """
+    raw_rows = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .in_("source", FULL_TEXT_SOURCES)
         .order("id")
     )
     raw_ids = [r["id"] for r in raw_rows]
@@ -416,18 +452,15 @@ def main():
         ],
     }
 
-    # ── 5. TOP 10 COMPANIES ──────────────────────────────────────────────────────
-    # Count US PM openings that were still live on each employer board within
-    # the past 7 days (last_seen_date >= today - 6). This correctly handles:
-    #   - Stable companies (e.g. Stripe): all active jobs counted, not just new ones
-    #   - Filled/removed roles: age out within 7 days as last_seen_date goes stale
-    #   - Non-US roles: excluded via is_us flag set at ingest time
+    # ── 5. TOP 10 COMPANIES (ALL SOURCES) ────────────────────────────────────────
+    # Count US PM openings active within the last 7 days across every source
+    # (Adzuna, JSearch, Greenhouse, Ashby, Lever). Counted per raw_id — each
+    # location-posting separately — and ranked by total PM openings. No AI
+    # filtering: this section is purely about hiring volume.
     seven_day_start = target_date - timedelta(days=6)
-    active_records = fetch_active_employer_records(supabase, seven_day_start, PIPELINE_VERSION)
-    active_ai = [r for r in active_records if r.get("has_ai_requirement")]
+    active_pm_records = fetch_active_pm_records(supabase, seven_day_start, PIPELINE_VERSION)
 
     # Direction: compare against the snapshot from exactly 7 days ago.
-    # This gives a true week-over-week delta instead of a first-seen window comparison.
     prev_week_date = target_date - timedelta(days=7)
     prev_snap_resp = (
         supabase.table("daily_snapshots")
@@ -436,49 +469,56 @@ def main():
         .execute()
     )
     prev_totals: dict[str, int] = {}
-    prev_ai_counts: dict[str, int] = {}
     if prev_snap_resp.data:
         prev_data = prev_snap_resp.data[0].get("top_employers_ai_skills") or {}
         for c in prev_data.get("companies") or []:
-            prev_totals[c["company"]] = c["total_count"]
-            prev_ai_counts[c["company"]] = c.get("ai_count", 0)
+            prev_totals[c["company"]] = c.get("total_count", 0)
 
-    current_total = count_companies(active_records)
-    current_ai = count_companies(active_ai)
+    current_total = count_companies(active_pm_records)
     top_10_companies = sorted(current_total.items(), key=lambda x: x[1], reverse=True)[:10]
 
+    # Snapshot key kept as top_employers_ai_skills for backward compatibility.
     top_employers_ai_skills = {
         "window_days": 7,
         "window_end": str(target_date),
+        "total_active_pm": len(active_pm_records),
         "companies": [
             {
                 "rank": i + 1,
                 "company": company,
                 "total_count": total_count,
-                "ai_count": current_ai.get(company, 0),
-                "count": current_ai.get(company, 0),  # backward compat
-                "ai_pct": round(current_ai.get(company, 0) / total_count * 100) if total_count > 0 else 0,
                 "prev_total_count": prev_totals.get(company, 0),
-                "prev_count": prev_ai_counts.get(company, 0),
                 "direction": company_direction(total_count, prev_totals.get(company, 0)),
             }
             for i, (company, total_count) in enumerate(top_10_companies)
         ],
     }
+    log.info(f"Top companies: {len(active_pm_records)} active PM postings across all sources")
 
     # ── 5b. AI SKILLS BY DOMAIN ──────────────────────────────────────────────────
-    # Count active US PM postings (per raw_id, consistent with the company
-    # count) that mention each domain's keywords. Measured over exactly the
-    # same active employer-board population as Top Companies above — no daily
-    # sampling, no extrapolation. One representative quote is attached per
-    # domain from a matching posting's description_text.
+    # Measured over every PM posting we hold a full description for — all
+    # full-text sources (JSearch, Greenhouse, Ashby, Lever), accumulated since
+    # tracking began, deduplicated by dedup_hash. For each domain, count
+    # distinct postings mentioning its keywords; attach one representative
+    # quote, spread across companies where the data allows.
+    all_ft = fetch_all_full_text_enriched(supabase, PIPELINE_VERSION)
+    ft_by_hash: dict[str, dict] = {}
+    for r in all_ft:
+        h = r.get("dedup_hash")
+        if h and h not in ft_by_hash:
+            ft_by_hash[h] = r
+    ft_distinct = list(ft_by_hash.values())
+    ft_total = len(ft_distinct)
+    ft_ai = [r for r in ft_distinct if r.get("has_ai_requirement")]
+    ft_ai_rate = round(len(ft_ai) / ft_total * 100, 1) if ft_total else None
+
     domain_keywords = fetch_domain_keywords(supabase)
     domain_matches: dict[str, list] = {}
     domain_counts: dict[str, int] = {}
     for slug, keywords in domain_keywords.items():
         kw_set = set(keywords)
         matching = [
-            r for r in active_ai
+            r for r in ft_ai
             if kw_set & set(r.get("ai_keyword_matches") or [])
         ]
         domain_matches[slug] = matching
@@ -530,10 +570,12 @@ def main():
     domain_items.sort(key=lambda d: d["count"], reverse=True)
 
     top_ai_skills["domains"] = domain_items
-    top_ai_skills["active_ai_total"] = len(active_ai)
+    top_ai_skills["full_text_total"] = ft_total
+    top_ai_skills["full_text_ai_total"] = len(ft_ai)
+    top_ai_skills["full_text_ai_rate"] = ft_ai_rate
     log.info(
-        f"AI skill domains: {sum(1 for d in domain_items if d['count'] > 0)}/{len(domain_items)} "
-        f"with signal across {len(active_ai)} active AI postings"
+        f"AI skills: {ft_total} full-text postings, {len(ft_ai)} require AI "
+        f"({ft_ai_rate}%); {sum(1 for d in domain_items if d['count'] > 0)}/{len(domain_items)} domains with signal"
     )
 
     # ── 6. DEDUP QUALITY ─────────────────────────────────────────────────────────
