@@ -3,107 +3,166 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Skills by Domain — proposed redesign</title>
+<title>AI Skills by Domain — redesign options</title>
 <style>
   * { box-sizing:border-box; }
   body { margin:0; background:#faf8f5; font-family:'Inter',system-ui,-apple-system,sans-serif; color:#1c1917; -webkit-text-size-adjust:100%; }
-  .wrap { max-width:880px; margin:0 auto; padding:1.5rem 1.15rem 3.5rem; }
+  .wrap { max-width:860px; margin:0 auto; padding:1.5rem 1.15rem 4rem; }
+  .banner { font-family:'DM Mono',ui-monospace,monospace; font-size:0.6rem; letter-spacing:.12em; text-transform:uppercase; color:#a06010; font-weight:700; margin-bottom:1rem; }
 
-  .banner { font-family:'DM Mono',ui-monospace,monospace; font-size:0.6rem; letter-spacing:.12em; text-transform:uppercase; color:#a06010; font-weight:700; margin-bottom:1.4rem; }
+  .explainer { background:#f3efe8; border:1px solid #e6e0d6; border-left:3px solid #a06010; border-radius:0 6px 6px 0; padding:0.9rem 1.05rem; margin-bottom:2rem; }
+  .explainer p { font-family:'Lora',Georgia,serif; font-size:0.8rem; line-height:1.6; color:#3d3830; margin:0; }
+  .explainer strong { color:#a06010; }
 
-  .section-header { display:flex; justify-content:space-between; align-items:baseline; padding:1.1rem 0 0.7rem; border-bottom:1px solid #1c1917; gap:0.5rem 1rem; flex-wrap:wrap; }
-  .section-title { font-family:'Playfair Display',Georgia,serif; font-size:1.15rem; font-weight:600; }
-  .section-meta { font-family:'DM Mono',ui-monospace,monospace; font-size:0.62rem; letter-spacing:.07em; text-transform:uppercase; color:#6b6560; }
-  .intro { font-family:'Lora',Georgia,serif; font-size:0.85rem; font-style:italic; color:#57534e; line-height:1.6; margin:0.9rem 0 1.5rem; max-width:660px; }
+  .opt-tag { font-family:'DM Mono',monospace; font-size:0.62rem; letter-spacing:.1em; text-transform:uppercase; color:#fff; background:#1c1917; display:inline-block; padding:0.28rem 0.6rem; border-radius:3px; margin:2.6rem 0 0.3rem; }
+  .opt-tag:first-of-type { margin-top:0.5rem; }
+  .opt-note { font-family:'Lora',Georgia,serif; font-size:0.78rem; font-style:italic; color:#6b6560; margin:0 0 1.15rem; }
 
-  .sk-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.6rem 2rem; }
-  .sk-card { display:flex; flex-direction:column; min-height:178px; }
-  .sk-name { font-family:'Playfair Display',Georgia,serif; font-size:1rem; font-weight:600; margin:0 0 0.2rem; }
-  .sk-def { font-family:'Lora',Georgia,serif; font-size:0.78rem; font-style:italic; color:#6b6560; line-height:1.45; margin:0 0 0.65rem; }
-  .sk-rule { border:none; border-top:1px solid #d8d2c8; margin:0 0 0.8rem; }
-  .sk-row { display:grid; grid-template-columns:118px 1fr 38px; align-items:center; gap:0.6rem; margin-bottom:0.55rem; }
-  .sk-label { font-family:'Lora',Georgia,serif; font-size:0.83rem; color:#3d3830; }
-  .sk-track { height:6px; background:#ece7df; border-radius:3px; overflow:hidden; }
-  .sk-fill { height:100%; background:#a06010; border-radius:3px; }
-  .sk-pct { font-family:'DM Mono',monospace; font-size:0.8rem; font-weight:700; color:#a06010; text-align:right; }
-  .sk-more { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:.04em; text-transform:uppercase; color:#a89f93; margin-top:auto; padding-top:0.55rem; }
+  .section-header { display:flex; justify-content:space-between; align-items:baseline; padding:0.4rem 0 0.6rem; border-bottom:1px solid #1c1917; gap:0.4rem 1rem; flex-wrap:wrap; }
+  .section-title { font-family:'Playfair Display',Georgia,serif; font-size:1.05rem; font-weight:600; }
+  .section-meta { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:.07em; text-transform:uppercase; color:#6b6560; }
 
-  .sk-awaiting { background:#f3efe8; border:1px solid #e6e0d6; border-radius:6px; padding:1rem 1.1rem; display:flex; flex-direction:column; min-height:178px; }
-  .awaiting-hd { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:.1em; text-transform:uppercase; color:#a89f93; margin-bottom:0.75rem; }
-  .awaiting-item { margin-bottom:0.65rem; }
-  .awaiting-name { font-family:'Playfair Display',Georgia,serif; font-size:0.92rem; font-weight:600; color:#6b6560; }
-  .awaiting-def { font-family:'Lora',Georgia,serif; font-size:0.74rem; font-style:italic; color:#a89f93; line-height:1.45; }
-  .awaiting-foot { font-family:'DM Mono',monospace; font-size:0.58rem; color:#a89f93; margin-top:auto; padding-top:0.45rem; }
+  /* ---- Option A: card grid ---- */
+  .a-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; margin-top:1.1rem; }
+  .a-card { border:1px solid #e6e0d6; border-radius:6px; padding:1.05rem 1.1rem; background:#fff; }
+  .a-top { display:flex; justify-content:space-between; align-items:baseline; gap:0.6rem; }
+  .a-name { font-family:'Playfair Display',Georgia,serif; font-size:1rem; font-weight:600; }
+  .a-count { font-family:'DM Mono',monospace; font-size:1rem; font-weight:700; color:#a06010; white-space:nowrap; }
+  .a-count small { font-size:0.55rem; letter-spacing:.06em; text-transform:uppercase; color:#a89f93; display:block; text-align:right; font-weight:400; }
+  .a-ability { font-family:'Lora',Georgia,serif; font-size:0.79rem; font-style:italic; color:#6b6560; line-height:1.5; margin:0.45rem 0 0.75rem; }
+  .a-quote { font-family:'Lora',Georgia,serif; font-size:0.82rem; line-height:1.55; color:#3d3830; border-left:2px solid #a06010; padding-left:0.7rem; }
+  .a-attr { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:.04em; text-transform:uppercase; color:#a89f93; margin-top:0.5rem; }
+
+  /* ---- Option B: editorial split rows ---- */
+  .b-row { display:grid; grid-template-columns:34% 1fr; gap:1.6rem; padding:1.35rem 0; border-bottom:1px solid #d8d2c8; }
+  .b-row:first-of-type { border-top:1px solid #d8d2c8; }
+  .b-name { font-family:'Playfair Display',Georgia,serif; font-size:1.15rem; font-weight:600; line-height:1.2; }
+  .b-stat { margin:0.55rem 0 0.5rem; }
+  .b-num { font-family:'Playfair Display',Georgia,serif; font-size:1.7rem; font-weight:700; color:#a06010; line-height:1; }
+  .b-numlabel { font-family:'DM Mono',monospace; font-size:0.56rem; letter-spacing:.07em; text-transform:uppercase; color:#a89f93; margin-top:0.2rem; }
+  .b-ability { font-family:'Lora',Georgia,serif; font-size:0.77rem; font-style:italic; color:#6b6560; line-height:1.5; }
+  .b-quote { font-family:'Lora',Georgia,serif; font-size:1rem; line-height:1.6; color:#1c1917; }
+  .b-quote .mark { color:#a06010; font-size:1.3rem; font-weight:700; }
+  .b-attr { font-family:'DM Mono',monospace; font-size:0.6rem; letter-spacing:.04em; text-transform:uppercase; color:#a89f93; margin-top:0.65rem; }
+
+  /* ---- Option C: ranked list ---- */
+  .c-row { padding:1rem 0; border-bottom:1px solid #ece7df; }
+  .c-top { display:flex; align-items:baseline; gap:0.5rem; }
+  .c-rank { font-family:'DM Mono',monospace; font-size:0.66rem; color:#a89f93; }
+  .c-name { font-family:'Playfair Display',Georgia,serif; font-size:0.98rem; font-weight:600; }
+  .c-count { margin-left:auto; font-family:'DM Mono',monospace; font-size:0.9rem; font-weight:700; color:#a06010; }
+  .c-share { font-family:'DM Mono',monospace; font-size:0.62rem; color:#a89f93; }
+  .c-track { height:5px; background:#ece7df; border-radius:3px; overflow:hidden; margin:0.45rem 0 0.55rem; }
+  .c-fill { height:100%; background:#a06010; border-radius:3px; }
+  .c-ability { font-family:'Lora',Georgia,serif; font-size:0.76rem; font-style:italic; color:#6b6560; margin-bottom:0.3rem; }
+  .c-quote { font-family:'Lora',Georgia,serif; font-size:0.84rem; line-height:1.5; color:#3d3830; }
+  .c-attr { font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:.04em; text-transform:uppercase; color:#a89f93; margin-top:0.35rem; }
 
   @media (max-width:680px) {
-    .sk-grid { grid-template-columns:1fr; gap:1.75rem; }
-    .sk-card { min-height:0; }
-    .sk-card:not(:last-of-type) { border-bottom:1px solid #ece7df; padding-bottom:1.5rem; }
-    .sk-awaiting { min-height:0; }
-    .section-title { font-size:1.05rem; }
-    .sk-row { grid-template-columns:122px 1fr 40px; }
+    .a-grid { grid-template-columns:1fr; }
+    .b-row { grid-template-columns:1fr; gap:0.85rem; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="banner">Proposed redesign · AI Skills section</div>
-  <section>
-    <div class="section-header">
-      <span class="section-title">III. AI Skills by Domain</span>
-      <span class="section-meta">5 of 7 domains active</span>
-    </div>
-    <p class="intro">
-      Which AI competencies PM job descriptions ask for. Each bar is the share of
-      AI-mentioning postings that cite a skill — from 18 sampled in the latest snapshot.
-    </p>
-    <div class="sk-grid" id="render"></div>
-  </section>
-</div>
-<script>
-const domains = [
-  { name:'Model Fluency', def:"Reasoning about what AI models can and can't do.",
-    skills:[['LLMs',39],['Generative AI',28],['Machine learning',17]], more:6 },
-  { name:'Agentic Systems', def:'Designing products where AI acts autonomously.',
-    skills:[['Agentic',44],['AI agents',28],['Agentic workflows',22]], more:3 },
-  { name:'AI Building Blocks', def:'The technical pieces that power AI features.',
-    skills:[['RAG',28],['Conversational AI',22],['Prompt engineering',11]], more:5 },
-  { name:'AI Deployment', def:'Owning AI systems in production.',
-    skills:[['AI platform',22],['MLOps',11]], more:6 },
-  { name:'Evals & Quality', def:"Defining and measuring what 'good' means for AI.",
-    skills:[['Human-in-the-loop',17],['Hallucination',11]], more:5 },
-];
-const awaiting = [
-  { name:'AI Safety', def:'Shipping AI that is trustworthy, fair, and compliant.' },
-  { name:'AI Product Vision', def:'Setting long-term AI product direction.' },
-];
+  <div class="banner">Redesign options · AI Skills by Domain</div>
 
-const cards = domains.map(d => `
-  <div class="sk-card">
-    <h3 class="sk-name">${d.name}</h3>
-    <p class="sk-def">${d.def}</p>
-    <hr class="sk-rule">
-    ${d.skills.map(([label,pct]) => `
-      <div class="sk-row">
-        <span class="sk-label">${label}</span>
-        <div class="sk-track"><div class="sk-fill" style="width:${pct}%"></div></div>
-        <span class="sk-pct">${pct}%</span>
-      </div>`).join('')}
-    <div class="sk-more">+${d.more} keywords tracked</div>
+  <div class="explainer">
+    <p><strong>Now the counts add up.</strong> Every PM posting that requires AI skills is
+    assigned to exactly one <em>primary</em> domain, so the eight domain counts sum to the
+    ~63,000 total — no posting double-counted, none dropped. A new catch-all domain,
+    <em>Applied AI Product</em>, holds postings that ask for AI experience without naming a
+    specific competency. Each card shows three of eight domains for layout review.</p>
+  </div>
+
+  <!-- ============ OPTION A ============ -->
+  <span class="opt-tag">Option A — Card grid</span>
+  <p class="opt-note">Compact two-column cards. Quote sits as a small pull-quote with an amber rule.</p>
+  <div class="section-header">
+    <span class="section-title">III. AI Skills by Domain</span>
+    <span class="section-meta">~63,000 AI postings · 8 domains</span>
+  </div>
+  <div class="a-grid" id="renderA"></div>
+
+  <!-- ============ OPTION B ============ -->
+  <span class="opt-tag">Option B — Editorial spread</span>
+  <p class="opt-note">Full-width rows. The job-posting quote gets room to breathe, magazine-style.</p>
+  <div class="section-header">
+    <span class="section-title">III. AI Skills by Domain</span>
+    <span class="section-meta">~63,000 AI postings · 8 domains</span>
+  </div>
+  <div id="renderB"></div>
+
+  <!-- ============ OPTION C ============ -->
+  <span class="opt-tag">Option C — Ranked list</span>
+  <p class="opt-note">Sorted by demand, with a share bar. Quote is a supporting line. Most scannable.</p>
+  <div class="section-header">
+    <span class="section-title">III. AI Skills by Domain</span>
+    <span class="section-meta">~63,000 AI postings · 8 domains</span>
+  </div>
+  <div id="renderC"></div>
+</div>
+
+<script>
+const TOTAL = 63000;
+const domains = [
+  { name:'Agentic Systems', count:14800,
+    ability:'design products where AI takes multi-step actions autonomously.',
+    quote:'Experience designing agentic workflows where the model plans and executes multi-step tasks with minimal human oversight.',
+    company:'Sierra', role:'Product Manager, Agents' },
+  { name:'Model Fluency', count:12400,
+    ability:"reason about what AI models can and can't do.",
+    quote:'Deep understanding of LLM capabilities and limitations, and the judgment to know when generative AI is the right tool for the job.',
+    company:'OpenAI', role:'Product Manager, Platform' },
+  { name:'AI Building Blocks', count:11200,
+    ability:'understand and spec the technical components that power AI features.',
+    quote:'Hands-on familiarity with RAG, embeddings, and prompt design — enough to spec AI features alongside engineering.',
+    company:'Glean', role:'Senior Product Manager' },
+];
+const fmt = n => n.toLocaleString();
+const share = n => Math.round(n / TOTAL * 100);
+
+document.getElementById('renderA').innerHTML = domains.map(d => `
+  <div class="a-card">
+    <div class="a-top">
+      <span class="a-name">${d.name}</span>
+      <span class="a-count">${fmt(d.count)}<small>postings</small></span>
+    </div>
+    <p class="a-ability">The ability to ${d.ability}</p>
+    <div class="a-quote">${d.quote}</div>
+    <div class="a-attr">${d.company} · ${d.role}</div>
   </div>`).join('');
 
-const awaitingCard = `
-  <div class="sk-awaiting">
-    <div class="awaiting-hd">Awaiting signal</div>
-    ${awaiting.map(a => `
-      <div class="awaiting-item">
-        <div class="awaiting-name">${a.name}</div>
-        <div class="awaiting-def">${a.def}</div>
-      </div>`).join('')}
-    <div class="awaiting-foot">Tracked — no sampled postings cite these yet.</div>
-  </div>`;
+document.getElementById('renderB').innerHTML = domains.map(d => `
+  <div class="b-row">
+    <div>
+      <div class="b-name">${d.name}</div>
+      <div class="b-stat">
+        <div class="b-num">${fmt(d.count)}</div>
+        <div class="b-numlabel">PM postings need this</div>
+      </div>
+      <div class="b-ability">The ability to ${d.ability}</div>
+    </div>
+    <div>
+      <div class="b-quote"><span class="mark">&ldquo;</span>${d.quote}<span class="mark">&rdquo;</span></div>
+      <div class="b-attr">${d.company} — ${d.role}</div>
+    </div>
+  </div>`).join('');
 
-document.getElementById('render').innerHTML = cards + awaitingCard;
+document.getElementById('renderC').innerHTML = domains.map((d,i) => `
+  <div class="c-row">
+    <div class="c-top">
+      <span class="c-rank">${i+1}</span>
+      <span class="c-name">${d.name}</span>
+      <span class="c-count">${fmt(d.count)}</span>
+      <span class="c-share">${share(d.count)}%</span>
+    </div>
+    <div class="c-track"><div class="c-fill" style="width:${share(d.count)}%"></div></div>
+    <div class="c-ability">The ability to ${d.ability}</div>
+    <div class="c-quote">&ldquo;${d.quote}&rdquo;</div>
+    <div class="c-attr">${d.company} · ${d.role}</div>
+  </div>`).join('');
 </script>
 </body>
 </html>
