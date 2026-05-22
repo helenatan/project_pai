@@ -231,27 +231,49 @@ DOMAIN_KEYWORDS: dict[str, list[str]] = {
 }
 
 
-def extract_quote_snippet(description: str, keywords: list[str], max_len: int = 220) -> Optional[str]:
-    """Return the first sentence in `description` that contains any of the keywords."""
+def extract_quote_snippet(description: str, keywords: list[str], max_len: int = 240) -> Optional[str]:
+    """Return the first sentence or bullet-point fragment in `description` that
+    contains any of the keywords.
+
+    Keywords are matched on word boundaries so short tokens like 'rag' do not
+    spuriously match inside longer words (e.g. 'fragmented'). Over-long
+    fragments are trimmed to a window around the keyword, snapped to word
+    boundaries so the quote never starts or ends mid-word.
+    """
     if not description:
         return None
     text = re.sub(r"\s+", " ", description).strip()
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-    kw_lower = [kw.lower() for kw in keywords]
-    for sent in sentences:
-        sent = sent.strip()
-        if len(sent) < 25:
+    # Stripped HTML can fuse a heading into the next sentence (e.g.
+    # "AI PlatformThe Opportunity"); re-split lowercase→Uppercase-word joins.
+    text = re.sub(r"([a-z])([A-Z][a-z])", r"\1 \2", text)
+    # Split on sentence-enders and bullet markers — stripped-HTML descriptions
+    # often join requirement bullets into one run-on line.
+    fragments = re.split(r"(?<=[.!?])\s+|\s*[•·▪‣◦]\s*", text)
+    patterns = [re.compile(r"\b" + re.escape(kw) + r"\b", re.IGNORECASE) for kw in keywords]
+    for frag in fragments:
+        frag = frag.strip(" -–—•·\t")
+        if len(frag) < 25:
             continue
-        sent_lower = sent.lower()
-        for kw in kw_lower:
-            if kw in sent_lower:
-                if len(sent) > max_len:
-                    idx = sent_lower.find(kw)
-                    half = max_len // 2
-                    start = max(0, idx - half)
-                    end = min(len(sent), start + max_len)
-                    sent = ("…" if start > 0 else "") + sent[start:end].strip() + ("…" if end < len(sent) else "")
-                return sent
+        for pat in patterns:
+            m = pat.search(frag)
+            if not m:
+                continue
+            if len(frag) <= max_len:
+                return frag
+            # Trim a window around the keyword, then snap to word boundaries
+            half = max_len // 2
+            start = max(0, m.start() - half)
+            end = min(len(frag), start + max_len)
+            if start > 0:
+                nxt = frag.find(" ", start)
+                if 0 <= nxt < m.start():
+                    start = nxt + 1
+            if end < len(frag):
+                prv = frag.rfind(" ", m.end(), end)
+                if prv > 0:
+                    end = prv
+            snippet = frag[start:end].strip()
+            return ("… " if start > 0 else "") + snippet + (" …" if end < len(frag) else "")
     return None
 
 
@@ -397,6 +419,7 @@ def main():
     # from the matching posting's description_text.
     domain_sample_ids: dict[str, int] = {}
     domain_counts: dict[str, int] = {}
+    used_raw_ids: set = set()
     for slug, keywords in DOMAIN_KEYWORDS.items():
         kw_set = set(keywords)
         matching = [
@@ -405,7 +428,10 @@ def main():
         ]
         domain_counts[slug] = len(matching)
         if matching:
-            domain_sample_ids[slug] = matching[0]["raw_id"]
+            # Prefer a posting not already quoted by another domain, for variety
+            pick = next((r for r in matching if r["raw_id"] not in used_raw_ids), matching[0])
+            domain_sample_ids[slug] = pick["raw_id"]
+            used_raw_ids.add(pick["raw_id"])
 
     # Batch-fetch description_text + company for one sample posting per domain
     all_sample_raw_ids = list(set(domain_sample_ids.values()))
