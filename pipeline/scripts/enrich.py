@@ -76,6 +76,15 @@ def normalize_title(raw_title: str) -> tuple[str, str]:
     return "Other", "unknown"
 
 
+COMPANY_ALIASES = {
+    "jpmorganchase": "jpmorgan chase",
+    "jp morgan chase": "jpmorgan chase",
+    "jp morgan": "jpmorgan chase",
+    "j.p. morgan": "jpmorgan chase",
+    "j.p. morgan chase": "jpmorgan chase",
+}
+
+
 def normalize_company_name(raw_name: str) -> str:
     if not raw_name:
         return ""
@@ -85,7 +94,8 @@ def normalize_company_name(raw_name: str) -> str:
         ", corp.", ", corp", ", co.", " inc.", " inc", " llc", " ltd",
     ]:
         name = name.replace(suffix, "")
-    return " ".join(name.split())
+    name = " ".join(name.split())
+    return COMPANY_ALIASES.get(name, name)
 
 
 def compute_dedup_hash(company: str, title: str) -> str:

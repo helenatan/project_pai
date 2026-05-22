@@ -172,6 +172,15 @@ def company_direction(current_count: int, prev_count: int) -> str:
     return "flat"
 
 
+COMPANY_ALIASES = {
+    "jpmorganchase": "jpmorgan chase",
+    "jp morgan chase": "jpmorgan chase",
+    "jp morgan": "jpmorgan chase",
+    "j.p. morgan": "jpmorgan chase",
+    "j.p. morgan chase": "jpmorgan chase",
+}
+
+
 def count_companies(records: list[dict]) -> dict[str, int]:
     """Count PM job postings per company, deduplicated by dedup_hash.
 
@@ -180,12 +189,14 @@ def count_companies(records: list[dict]) -> dict[str, int]:
     Feed sources (Adzuna/JSearch) re-fetch the same job across multiple runs;
     dedup_hash collapses those repeats to one, preventing artificial inflation.
     Falls back to raw_id when dedup_hash is absent.
+    COMPANY_ALIASES merges known variant spellings that exist in the DB.
     """
     out: dict[str, set] = {}
     for r in records:
         company = r.get("company_normalized") or ""
         if not company:
             continue
+        company = COMPANY_ALIASES.get(company, company)
         key = r.get("dedup_hash") or r.get("raw_id")
         out.setdefault(company, set()).add(key)
     return {company: len(ids) for company, ids in out.items()}
@@ -220,7 +231,7 @@ def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list
     return _batched_in(
         supabase,
         "job_postings_enriched",
-        "raw_id,dedup_hash,company_normalized,has_ai_requirement",
+        "raw_id,dedup_hash,company_normalized,has_ai_requirement,normalized_title",
         raw_ids,
         extra_eq=(("pipeline_version", version),),
     )
@@ -461,7 +472,11 @@ def main():
     # location-posting separately — and ranked by total PM openings. No AI
     # filtering: this section is purely about hiring volume.
     seven_day_start = target_date - timedelta(days=6)
-    active_pm_records = fetch_active_pm_records(supabase, seven_day_start, PIPELINE_VERSION)
+    active_pm_records = [
+        r for r in fetch_active_pm_records(supabase, seven_day_start, PIPELINE_VERSION)
+        if r.get("normalized_title") != "Other"
+    ]
+    log.info(f"Active PM records after title filter: {len(active_pm_records)}")
 
     # Direction: compare against the snapshot from exactly 7 days ago.
     prev_week_date = target_date - timedelta(days=7)
