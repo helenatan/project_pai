@@ -173,18 +173,21 @@ def company_direction(current_count: int, prev_count: int) -> str:
 
 
 def count_companies(records: list[dict]) -> dict[str, int]:
-    """Count PM job postings per company by raw_id -- one count per posting.
+    """Count PM job postings per company, deduplicated by dedup_hash.
 
-    Each posting counts separately, including the same role posted in multiple
-    locations: a role open in four locations is four openings. Every
-    Greenhouse/Ashby posting has a unique source_id, hence a unique raw_id.
+    Employer-board postings (Greenhouse/Ashby/Lever) assign a unique dedup_hash
+    per role-location, so multi-city roles still count each location separately.
+    Feed sources (Adzuna/JSearch) re-fetch the same job across multiple runs;
+    dedup_hash collapses those repeats to one, preventing artificial inflation.
+    Falls back to raw_id when dedup_hash is absent.
     """
     out: dict[str, set] = {}
     for r in records:
         company = r.get("company_normalized") or ""
         if not company:
             continue
-        out.setdefault(company, set()).add(r.get("raw_id"))
+        key = r.get("dedup_hash") or r.get("raw_id")
+        out.setdefault(company, set()).add(key)
     return {company: len(ids) for company, ids in out.items()}
 
 
