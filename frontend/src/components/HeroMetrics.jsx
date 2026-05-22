@@ -15,16 +15,11 @@ function delta(current, avg) {
 export default function HeroMetrics({ snapshot }) {
   if (!snapshot) return null
 
-  const aiRate = snapshot.ai_penetration_rate != null
-    ? parseFloat(parseFloat(snapshot.ai_penetration_rate).toFixed(1))
-    : null
-
   const d1 = delta(snapshot.total_postings, snapshot.total_postings_7day_avg)
   const d2 = delta(snapshot.new_postings_today, snapshot.new_postings_7day_avg)
-  const d3 = delta(aiRate, snapshot.ai_penetration_7day_avg)
 
   return (
-    <section className="hero-metrics">
+    <section className="hero-metrics hero-metrics-2">
       <div className="metric-cell">
         <div className="metric-label">Active PM openings (US)</div>
         <div className="metric-value">{fmtNum(snapshot.total_postings)}</div>
@@ -34,16 +29,6 @@ export default function HeroMetrics({ snapshot }) {
         <div className="metric-label">New PM jobs posted today</div>
         <div className="metric-value">{fmtNum(snapshot.new_postings_today)}</div>
         <div className={`metric-delta ${d2.cls}`}>{d2.text}</div>
-      </div>
-      <div className="metric-cell">
-        <div className="metric-label">AI skill requirement rate</div>
-        <div className="metric-value ai-rate">{aiRate != null ? `${aiRate}%` : '—'}</div>
-        <div className={`metric-delta ${d3.cls}`}>{d3.text}</div>
-        {aiRate != null && snapshot.total_postings != null && (
-          <div className="metric-note">
-            ~{Math.round(aiRate / 100 * snapshot.total_postings).toLocaleString()} of {fmtNum(snapshot.total_postings)} active openings estimated
-          </div>
-        )}
       </div>
     </section>
   )

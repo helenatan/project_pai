@@ -5,7 +5,6 @@ import RampNotice from './components/RampNotice'
 import Digest from './components/Digest'
 import HeroMetrics from './components/HeroMetrics'
 import VolumeChart from './components/VolumeChart'
-import AIPenetrationChart from './components/AIPenetrationChart'
 import SkillsPanel from './components/SkillsPanel'
 import CompaniesPanel from './components/CompaniesPanel'
 import Footer from './components/Footer'
@@ -81,7 +80,6 @@ export default function App() {
       <Digest snapshot={latestDigest} />
       <HeroMetrics snapshot={today} />
       <VolumeChart snapshots={snapshots} />
-      <AIPenetrationChart snapshots={snapshots} />
       <CompaniesPanel snapshot={today} />
       <SkillsPanel snapshot={today} />
       <Footer snapshot={today} dayN={dayN} />

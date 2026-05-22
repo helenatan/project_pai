@@ -83,8 +83,9 @@ export default function SkillsPanel({ snapshot }) {
   const tas = snapshot?.top_ai_skills || {}
   const domains = tas.domains || []
   const dataMap = Object.fromEntries(domains.map((d) => [d.slug, d]))
-  const activeAiTotal = tas.active_ai_total ?? null
-  const withSignal = domains.filter((d) => (d.count || 0) > 0).length
+  const ftTotal = tas.full_text_total ?? null
+  const ftAiTotal = tas.full_text_ai_total ?? null
+  const ftAiRate = tas.full_text_ai_rate ?? null
 
   // Rank cards by posting count — most in-demand domains first.
   // Stable sort keeps the declared DOMAINS order for ties (incl. zero-signal).
@@ -95,17 +96,19 @@ export default function SkillsPanel({ snapshot }) {
   return (
     <section>
       <div className="section-header">
-        <span className="section-title">IV. AI Skills by Domain</span>
+        <span className="section-title">III. AI Skills by Domain</span>
         <span className="section-meta">7 categories · ranked by demand</span>
       </div>
       <p className="domain-intro">
-        How often each AI competency appears across
-        {activeAiTotal != null ? ` ${activeAiTotal.toLocaleString()} ` : ' '}
-        active US PM postings that require AI skills. A posting can span several
-        domains, so counts overlap and aren&rsquo;t expected to sum.
-        {withSignal > 0 && withSignal < 7
-          ? ` ${withSignal} of 7 categories show signal so far; the rest are tracked as more data accumulates.`
-          : ''}
+        {ftTotal != null
+          ? `Based on the ${ftTotal.toLocaleString()} PM postings we hold a complete job description for`
+          : 'Based on the PM postings we hold a complete job description for'}
+        {ftAiTotal != null && ftAiRate != null
+          ? ` — ${ftAiTotal.toLocaleString()} of them (${ftAiRate}%) require AI skills.`
+          : '.'}
+        {' '}Each card counts how many of those AI postings name a given domain;
+        a posting can span several domains, so counts overlap and aren&rsquo;t
+        expected to sum.
       </p>
       <div className="domain-grid">
         {orderedDomains.map((d, i) => (

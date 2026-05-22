@@ -76,6 +76,8 @@ body::before {
 
 /* ── HERO METRICS ── */
 .hero-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--paper-rule); margin-top: 1.5rem; }
+.hero-metrics-2 { grid-template-columns: 1fr 1fr; }
+.hero-metrics-2 .metric-cell:nth-child(2) { border-right: none; padding: 1.75rem 0 1.75rem 2rem; }
 .metric-cell { padding: 1.75rem 0; border-right: 1px solid var(--paper-rule); opacity: 0; animation: fadeUp 0.6s ease forwards; }
 .metric-cell:nth-child(1) { animation-delay: 0.08s; padding-right: 2rem; }
 .metric-cell:nth-child(2) { animation-delay: 0.18s; padding: 1.75rem 2rem; }
@@ -169,6 +171,7 @@ body::before {
 
 /* Top Companies — column table (ranked by total PM openings) */
 .co-table { display: grid; grid-template-columns: 20px 1fr 58px 58px; gap: 0.95rem 0.7rem; align-items: baseline; padding-top: 1.15rem; max-width: 520px; }
+.co-table-simple { grid-template-columns: 20px 1fr; }
 .co-th { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
 .co-th.total { text-align: right; }
 .co-th.ai { color: var(--signal-amber); text-align: right; }
