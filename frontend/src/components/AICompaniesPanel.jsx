@@ -37,6 +37,7 @@ function formatCompany(name) {
 export default function AICompaniesPanel({ snapshot }) {
   const tas = snapshot?.top_ai_skills
   const employers = tas?.top_ai_employers
+  const windowEnd = tas?.top_ai_employers_window_end
   if (!employers?.length) return null
 
   const maxCount = Math.max(...employers.map((c) => c.count), 1)
@@ -46,7 +47,7 @@ export default function AICompaniesPanel({ snapshot }) {
       <div className="section-header">
         <span className="section-title">IV. Top Companies Hiring AI PMs</span>
         <span className="section-meta">
-          AI-requiring PM postings · full-text sources · all-time
+          Active AI PM openings, all sources{windowEnd ? ` · week ending ${windowEnd}` : ''}
         </span>
       </div>
 
