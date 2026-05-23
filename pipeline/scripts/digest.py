@@ -77,10 +77,13 @@ def send_digest_email(subject: str, body: str):
         json={
             "subject": subject,
             "body": body,
+            "email_type": "public",
             "status": "about_to_send",
         },
         timeout=30,
     )
+    if not resp.ok:
+        log.error(f"Buttondown error {resp.status_code}: {resp.text}")
     resp.raise_for_status()
     log.info(f"Email sent via Buttondown: {resp.status_code}")
 
