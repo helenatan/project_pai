@@ -73,7 +73,10 @@ def generate_digest(payload: dict) -> str:
 def send_digest_email(subject: str, body: str):
     resp = requests.post(
         "https://api.buttondown.email/v1/emails",
-        headers={"Authorization": f"Token {BUTTONDOWN_API_KEY}"},
+        headers={
+            "Authorization": f"Token {BUTTONDOWN_API_KEY}",
+            "X-Buttondown-Live-Dangerously": "true",
+        },
         json={
             "subject": subject,
             "body": body,
