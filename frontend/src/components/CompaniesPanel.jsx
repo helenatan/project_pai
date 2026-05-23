@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 
 const COMPANY_NAMES = {
   openai: 'OpenAI',
@@ -34,47 +34,133 @@ function formatCompany(name) {
     .join(' ')
 }
 
+function fmtDate(d) {
+  if (!d) return ''
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric',
+  })
+}
+
+// Modal drawer that lists the underlying postings backing a company's row.
+function PostingsDrawer({ company, onClose }) {
+  // Close on Escape so keyboard users aren't trapped.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
+  const postings = company?.postings || []
+  const extra = (company?.total_count || 0) - postings.length
+
+  return (
+    <div className="drawer-overlay" onClick={onClose}>
+      <div className="drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-head">
+          <div>
+            <div className="drawer-eyebrow">Active PM openings</div>
+            <h3 className="drawer-title">{formatCompany(company.company)}</h3>
+            <div className="drawer-sub">
+              {company.total_count} open · {company.ai_count} require AI ({company.ai_rate}%)
+            </div>
+          </div>
+          <button className="drawer-close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+        <ul className="drawer-list">
+          {postings.map((p, i) => (
+            <li key={i} className="drawer-item">
+              <div className="drawer-item-title">{p.title || '—'}</div>
+              <div className="drawer-item-meta">
+                {[p.location, p.source ? `via ${p.source}` : null, fmtDate(p.posted_date)]
+                  .filter(Boolean).join(' · ')}
+              </div>
+            </li>
+          ))}
+          {!postings.length && (
+            <li className="drawer-item drawer-empty">No posting details available.</li>
+          )}
+        </ul>
+        {extra > 0 && (
+          <p className="drawer-foot">
+            Showing {postings.length} of {company.total_count} openings. Older roles in the
+            same active window are not displayed.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function CompaniesPanel({ snapshot }) {
   const data = snapshot?.top_employers_ai_skills
+  const [open, setOpen] = useState(null)
   if (!data?.companies?.length) return null
 
   const companies = data.companies.map((co) => ({
     ...co,
     totalCount: co.total_count ?? co.count ?? 0,
+    aiCount: co.ai_count ?? 0,
+    aiRate: co.ai_rate ?? 0,
   }))
   const maxTotal = Math.max(...companies.map((c) => c.totalCount), 1)
 
   return (
     <section className="count-bar-section">
       <div className="section-header">
-        <span className="section-title">II. Top Companies Hiring PMs</span>
+        <span className="section-title">II. Where PMs Are Hiring Now</span>
         <span className="section-meta">
-          Active PM openings, all sources · week ending {data.window_end}
+          Ranked by active PM openings · click a row for details · snapshot as of {data.window_end}
         </span>
       </div>
 
-      <div className="co-table co-table-simple">
+      <div className="co-table co-table-combined">
+        {/* Two empty cells for the rank + name columns so the three header
+            labels line up over their data columns (total / require AI / % AI). */}
         <span />
-        <span className="co-th total">Total PM openings</span>
+        <span />
+        <span className="co-th total">Total openings</span>
+        <span className="co-th ai">Require AI</span>
+        <span className="co-th rate">% AI</span>
         <div className="co-table-rule" />
         {companies.map((co) => {
+          // Total bar is proportional to the largest company's openings; AI
+          // bar is the AI share of that company's own total (so it reads as
+          // "this much of THIS company's hiring is AI" rather than as a
+          // separate cross-company comparison).
           const w = (co.totalCount / maxTotal) * 100
+          const wAiInside = co.totalCount > 0 ? (co.aiCount / co.totalCount) * w : 0
+          const aiPct = Math.round(co.aiRate)
           return (
             <Fragment key={co.company}>
               <span className="co-rank">{co.rank}</span>
-              <div className="co-main">
+              <div
+                className="co-main co-main-clickable"
+                onClick={() => setOpen(co)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOpen(co) }}
+              >
                 <div className="co-name-row">
                   <span className="co-name">{formatCompany(co.company)}</span>
-                  <span className="co-total-num">{co.totalCount.toLocaleString()}</span>
                 </div>
                 <div className="co-bar-track">
-                  <div className="co-bar-total" style={{ width: `${w}%` }} />
+                  <div className="co-bar-total-fill" style={{ width: `${w}%` }} />
+                  <div className="co-bar-ai-fill"    style={{ width: `${wAiInside}%` }} />
                 </div>
               </div>
+              <span className="co-num">{co.totalCount.toLocaleString()}</span>
+              <span className="co-num co-num-ai">{co.aiCount.toLocaleString()}</span>
+              <span className="co-num co-num-rate">{aiPct}%</span>
             </Fragment>
           )
         })}
       </div>
+
+      {open && <PostingsDrawer company={open} onClose={() => setOpen(null)} />}
     </section>
   )
 }

@@ -28,3 +28,4 @@ logs/
 
 # Backups
 backups/
+.vercel
