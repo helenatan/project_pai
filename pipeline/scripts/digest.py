@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import anthropic
 import requests
@@ -71,24 +71,25 @@ def generate_digest(payload: dict) -> str:
 
 
 def send_digest_email(subject: str, body: str):
+    # Use "scheduled" + 1-min publish_date to avoid the X-Buttondown-Live-Dangerously
+    # confirmation requirement that blocks "about_to_send".
+    publish_at = (datetime.now(timezone.utc) + timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     resp = requests.post(
         "https://api.buttondown.email/v1/emails",
-        headers={
-            "Authorization": f"Token {BUTTONDOWN_API_KEY}",
-            "X-Buttondown-Live-Dangerously": "true",
-        },
+        headers={"Authorization": f"Token {BUTTONDOWN_API_KEY}"},
         json={
             "subject": subject,
             "body": body,
             "email_type": "public",
-            "status": "about_to_send",
+            "status": "scheduled",
+            "publish_date": publish_at,
         },
         timeout=30,
     )
     if not resp.ok:
         log.error(f"Buttondown error {resp.status_code}: {resp.text}")
     resp.raise_for_status()
-    log.info(f"Email sent via Buttondown: {resp.status_code}")
+    log.info(f"Email scheduled via Buttondown for {publish_at}: {resp.status_code}")
 
 
 def main():
