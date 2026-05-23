@@ -1,22 +1,40 @@
-const BASELINE_TARGET = 112
+function fmtNum(n) {
+  return n != null ? n.toLocaleString() : '—'
+}
 
-export default function RampNotice({ dayN }) {
-  if (dayN == null || dayN >= BASELINE_TARGET) return null
+// Editorial commentary block at the top of the dashboard.
+// Holds the "Today" headline and a pointer to the Methodology & Limitations
+// section in the footer. Reuses the .ramp-notice styling for visual continuity.
+export default function RampNotice({ snapshot }) {
+  if (!snapshot) return null
 
-  const pct = Math.min(100, Math.max(0.9, (dayN / BASELINE_TARGET) * 100))
+  const total = snapshot.total_postings
+  const tas = snapshot.top_ai_skills || {}
+  const aiTotal = tas.active_ai_total
+  const aiRate = tas.active_ai_rate ?? snapshot.ai_penetration_rate
 
   return (
     <div className="ramp-notice">
-      <span className="ramp-icon">NOTE</span>
+      <span className="ramp-icon">NOTES</span>
       <div className="ramp-text">
-        <strong>Day {dayN} of data collection.</strong> Rolling averages, 7-day trends, and
-        directional signals require at least 7 days of data. Signals before Day 14 should be
-        interpreted cautiously — early trend comparisons may read as <em>new</em> with no prior
-        period to compare against.
-        <div className="ramp-progress">
-          <div className="ramp-bar-wrap"><div className="ramp-bar" style={{ width: `${pct}%` }} /></div>
-          <span className="ramp-bar-label">Day {dayN} of {BASELINE_TARGET} to full baseline</span>
-        </div>
+        <p>
+          <strong>Today.</strong>{' '}
+          {total != null ? (
+            <>
+              {fmtNum(total)} active US <strong>Product Manager</strong> openings indexed across
+              the job feeds and curated company boards we currently track.
+            </>
+          ) : null}
+          {aiTotal != null && aiRate != null ? (
+            <> Of those, <strong>{fmtNum(aiTotal)} ({Math.round(Number(aiRate))}%)</strong> explicitly require AI skills.</>
+          ) : null}
+        </p>
+        <p className="ramp-pointer">
+          For how these numbers are computed, the sources behind them, and what they don&rsquo;t
+          capture, see{' '}
+          <a href="#methodology" className="ramp-link">Methodology &amp; Limitations</a>{' '}
+          at the bottom of the page.
+        </p>
       </div>
     </div>
   )

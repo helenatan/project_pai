@@ -7,7 +7,6 @@ import HeroMetrics from './components/HeroMetrics'
 import VolumeChart from './components/VolumeChart'
 import SkillsPanel from './components/SkillsPanel'
 import CompaniesPanel from './components/CompaniesPanel'
-import AICompaniesPanel from './components/AICompaniesPanel'
 import Footer from './components/Footer'
 
 const COLUMNS = [
@@ -70,21 +69,20 @@ export default function App() {
 
   const today = snapshots.at(-1)
   const latestDigest = snapshots.filter((s) => s.summary_text).at(-1)
-  const dayN = Math.floor(
-    (new Date(today.snapshot_date) - new Date(snapshots[0].snapshot_date)) / 86_400_000
-  ) + 1
+  // Days of data we hold (used to gate trend deltas — comparisons aren't
+  // meaningful until we've accumulated a real prior period).
+  const daysOfData = snapshots.length
 
   return (
     <div className="page">
-      <Header today={today} dayN={dayN} />
-      <RampNotice dayN={dayN} />
+      <Header today={today} />
+      <RampNotice snapshot={today} />
       <Digest snapshot={latestDigest} />
-      <HeroMetrics snapshot={today} />
+      <HeroMetrics snapshot={today} daysOfData={daysOfData} />
       <VolumeChart snapshots={snapshots} />
       <CompaniesPanel snapshot={today} />
       <SkillsPanel snapshot={today} />
-      <AICompaniesPanel snapshot={today} />
-      <Footer snapshot={today} dayN={dayN} />
+      <Footer snapshot={today} />
     </div>
   )
 }

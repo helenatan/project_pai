@@ -25,17 +25,14 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 PIPELINE_VERSION = "v1.0"
 
-# Sources used for AI signal (full-text descriptions). Adzuna is excluded
-# because its descriptions are truncated to ~500 chars.
-FULL_TEXT_SOURCES = ["jsearch", "greenhouse", "ashby", "lever"]
-
-# Employer-board sources: authoritative, curated company boards re-scraped
-# daily, so they carry a reliable last_seen_date for active-window filtering.
-EMPLOYER_SOURCES = ["greenhouse", "ashby", "lever"]
-
-# Feed sources: fetched once as new postings, not re-checked — filtered by
-# posted_date rather than last_seen_date.
-FEED_SOURCES = ["adzuna", "jsearch"]
+# All sources we currently use. Every source here returns a complete job
+# description (no truncation), so the active-openings population is also the
+# AI-analysis population — no separate "sample" concept. Adzuna was removed in
+# favor of full-text-only sourcing.
+EMPLOYER_SOURCES = ["greenhouse", "ashby", "lever"]   # curated boards, re-scraped daily
+FEED_SOURCES     = ["jsearch"]                         # commercial feed, point-in-time
+FULL_TEXT_SOURCES = EMPLOYER_SOURCES + FEED_SOURCES    # alias kept for clarity in callers
+ALL_SOURCES       = FULL_TEXT_SOURCES                  # everything we count
 
 
 def get_supabase() -> Client:
@@ -202,39 +199,44 @@ def count_companies(records: list[dict]) -> dict[str, int]:
     return {company: len(ids) for company, ids in out.items()}
 
 
-def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list[dict]:
-    """All US PM postings active within the last 7 days, across every source.
+def fetch_active_pm_records(supabase: Client, target_date: date, version: str) -> list[dict]:
+    """All US PM postings active as of target_date, across every source.
 
-    Employer boards are re-scraped daily; a job is considered active if it was
-    last confirmed in the window (last_seen_date >= since) OR was newly scraped
-    in the window but not yet re-confirmed (last_seen_date IS NULL and
-    posted_date >= since). The is_us filter is applied only to confirmed-active
-    records because newly scraped records may not have is_us set yet.
-
-    Feed sources (Adzuna, JSearch) are fetched once and never re-checked, so they
-    are filtered by posted_date instead.
+    Uses the same windowing as compute_total_active_pm so Sections II and IV
+    sum to the same 'active' population as Section I (total_postings):
+    - Employer boards (Greenhouse/Ashby/Lever): 7-day last_seen_date window
+      OR last_seen_date IS NULL with posted_date in the same window (newly
+      scraped, not yet re-confirmed).
+    - Feed sources (JSearch): 45-day posted_date window — these are point-in-
+      time fetches with no re-verification, so we assume a posting remains
+      open for up to 45 days from posted_date. PM-specific posting lifetimes
+      (senior / AI-PM roles) often run past the generic 30-day rule of thumb,
+      so 45 gives better coverage without leaning on stale data.
     """
-    # Confirmed active: last_seen_date in window (is_us already reliable here)
+    board_since = str(target_date - timedelta(days=6))    # 7-day boards window
+    feed_since  = str(target_date - timedelta(days=44))   # 45-day feeds window
+
+    # Confirmed active: last_seen_date within board window
     confirmed_board = fetch_all_rows(
         lambda: supabase.table("job_postings_raw")
         .select("id")
-        .gte("last_seen_date", str(since))
+        .gte("last_seen_date", board_since)
         .in_("source", EMPLOYER_SOURCES)
         .order("id")
     )
-    # Newly scraped: last_seen_date NULL, posted in window
+    # Newly scraped: last_seen_date NULL, posted in board window
     new_board = fetch_all_rows(
         lambda: supabase.table("job_postings_raw")
         .select("id")
         .is_("last_seen_date", "null")
-        .gte("posted_date", str(since))
+        .gte("posted_date", board_since)
         .in_("source", EMPLOYER_SOURCES)
         .order("id")
     )
     feed_rows = fetch_all_rows(
         lambda: supabase.table("job_postings_raw")
         .select("id")
-        .gte("posted_date", str(since))
+        .gte("posted_date", feed_since)
         .in_("source", FEED_SOURCES)
         .order("id")
     )
@@ -255,22 +257,99 @@ def fetch_active_pm_records(supabase: Client, since: date, version: str) -> list
     )
 
 
-def compute_total_active_pm(supabase: Client, target_date: date, version: str) -> int:
-    """Count distinct active PM openings across all sources as of target_date.
+def compute_new_pm_postings_today(supabase: Client, target_date: date, version: str) -> int:
+    """Count distinct PM jobs first ingested on target_date (never seen before).
+
+    Replaces the all-titles new_jobs_on() RPC, which counted every job record
+    regardless of title. This function:
+    - Filters to PM-titled roles (normalized_title != 'Other')
+    - Deduplicates by dedup_hash (cross-source duplicates count once)
+    - Excludes hashes already seen on earlier run_dates (truly new only)
+    """
+    today_raw = fetch_all_rows(
+        lambda: supabase.table("job_postings_raw")
+        .select("id")
+        .eq("run_date", str(target_date))
+        .order("id")
+    )
+    if not today_raw:
+        return 0
+
+    today_enriched = _batched_in(
+        supabase, "job_postings_enriched",
+        "raw_id,dedup_hash,normalized_title",
+        [r["id"] for r in today_raw],
+        extra_eq=(("pipeline_version", version),),
+    )
+    today_pm_hashes = {
+        r["dedup_hash"]
+        for r in today_enriched
+        if r.get("dedup_hash") and r.get("normalized_title") != "Other"
+    }
+    if not today_pm_hashes:
+        return 0
+
+    # For each today-PM hash, collect all raw_ids ever enriched with that hash,
+    # then check whether any of those raw records have run_date before today.
+    hash_by_raw_id: dict = {}
+    hash_list = list(today_pm_hashes)
+    for i in range(0, len(hash_list), 50):
+        batch = hash_list[i:i + 50]
+        offset = 0
+        while True:
+            resp = (
+                supabase.table("job_postings_enriched")
+                .select("raw_id,dedup_hash")
+                .eq("pipeline_version", version)
+                .in_("dedup_hash", batch)
+                .range(offset, offset + 999)
+                .execute()
+            )
+            for r in resp.data:
+                hash_by_raw_id[r["raw_id"]] = r["dedup_hash"]
+            if len(resp.data) < 1000:
+                break
+            offset += 1000
+
+    hashes_seen_before: set = set()
+    raw_id_list = list(hash_by_raw_id.keys())
+    for i in range(0, len(raw_id_list), 100):
+        batch = raw_id_list[i:i + 100]
+        resp = (
+            supabase.table("job_postings_raw")
+            .select("id")
+            .lt("run_date", str(target_date))
+            .in_("id", batch)
+            .execute()
+        )
+        for r in resp.data:
+            h = hash_by_raw_id.get(r["id"])
+            if h:
+                hashes_seen_before.add(h)
+
+    return len(today_pm_hashes - hashes_seen_before)
+
+
+def compute_total_active_pm(supabase: Client, target_date: date, version: str) -> tuple[int, int]:
+    """Count active PM openings as of target_date, and how many require AI.
+
+    Returns (total_active, total_active_with_ai).
 
     Employer boards (Greenhouse/Ashby/Lever) are re-scraped daily, so a job is
     active if last_seen_date is within 7 days, or if it was newly scraped this
     week (last_seen_date IS NULL and posted_date within 7 days).
 
-    Feeds (Adzuna/JSearch) are point-in-time; PM jobs posted within 30 days are
-    assumed still open (typical PM posting duration).
+    JSearch is point-in-time with no re-verification; PM jobs posted within 45
+    days are assumed still open (PM-role posting lifetimes — especially senior
+    and AI-leaning roles — often run past the generic 30-day rule of thumb).
 
-    Results are restricted to PM-titled roles (normalized_title != 'Other') and
-    deduplicated by dedup_hash so the same opening fetched from multiple sources
-    is counted once.
+    All sources here return complete job descriptions, so every active posting
+    is eligible for AI-keyword analysis. Results are restricted to PM-titled
+    roles (normalized_title != 'Other') and deduplicated by dedup_hash so the
+    same opening fetched from multiple sources is counted once.
     """
     board_since = str(target_date - timedelta(days=6))   # 7-day window
-    feed_since  = str(target_date - timedelta(days=29))  # 30-day window
+    feed_since  = str(target_date - timedelta(days=44))  # 45-day window
 
     confirmed_board = fetch_all_rows(
         lambda: supabase.table("job_postings_raw")
@@ -297,20 +376,19 @@ def compute_total_active_pm(supabase: Client, target_date: date, version: str) -
 
     all_ids = list({r["id"] for r in confirmed_board + new_board + feed_rows})
     if not all_ids:
-        return 0
+        return (0, 0)
 
     enriched = _batched_in(
         supabase,
         "job_postings_enriched",
-        "dedup_hash,normalized_title",
+        "dedup_hash,normalized_title,has_ai_requirement",
         all_ids,
         extra_eq=(("pipeline_version", version),),
     )
-    return len({
-        r["dedup_hash"]
-        for r in enriched
-        if r.get("dedup_hash") and r.get("normalized_title") != "Other"
-    })
+    pm = [r for r in enriched if r.get("dedup_hash") and r.get("normalized_title") != "Other"]
+    total_hashes = {r["dedup_hash"] for r in pm}
+    ai_hashes = {r["dedup_hash"] for r in pm if r.get("has_ai_requirement")}
+    return (len(total_hashes), len(ai_hashes))
 
 
 def fetch_all_full_text_enriched(supabase: Client, version: str) -> list[dict]:
@@ -375,13 +453,35 @@ def extract_quote_snippet(description: str, keywords: list[str], max_len: int = 
     # Stripped HTML can fuse a heading into the next sentence (e.g.
     # "AI PlatformThe Opportunity"); re-split lowercase→Uppercase-word joins.
     text = re.sub(r"([a-z])([A-Z][a-z])", r"\1 \2", text)
+    # Also split when an ALLCAPS heading (e.g. "ROLE OVERVIEW") runs straight
+    # into a normal sentence (e.g. "As a Staff Engineer…").
+    text = re.sub(r"([A-Z]{3,})\s+([A-Z][a-z])", r"\1. \2", text)
     # Split on sentence-enders and bullet markers — stripped-HTML descriptions
     # often join requirement bullets into one run-on line.
     fragments = re.split(r"(?<=[.!?])\s+|\s*[•·▪‣◦]\s*", text)
     patterns = [re.compile(r"\b" + re.escape(kw) + r"\b", re.IGNORECASE) for kw in keywords]
+    # Patterns that look like leftover headings: lines that are mostly ALLCAPS,
+    # or start with one. We want quotes that read like prose, not bleed-through
+    # from HTML labels. We also skip "About <Company>" boilerplate openings.
+    HEADING_RE = re.compile(r"^[A-Z][A-Z &/\-]{2,}(?:\s|$)")
+    BOILERPLATE_RE = re.compile(r"^(?:about\s+\w|the\s+role|role\s+overview|the\s+opportunity)", re.IGNORECASE)
+
+    def looks_like_heading(s: str) -> bool:
+        if HEADING_RE.match(s):
+            return True
+        if BOILERPLATE_RE.match(s):
+            return True
+        # Mostly uppercase letters at the start (heading bleed)
+        head = s[:30]
+        upper = sum(1 for c in head if c.isupper())
+        lower = sum(1 for c in head if c.islower())
+        return upper > 6 and upper > lower * 2
+
     for frag in fragments:
         frag = frag.strip(" -–—•·\t")
         if len(frag) < 25:
+            continue
+        if looks_like_heading(frag):
             continue
         for pat in patterns:
             m = pat.search(frag)
@@ -417,7 +517,7 @@ def main():
     supabase = get_supabase()
 
     # ── 0. PARTIAL-FAILURE PROPAGATION ──────────────────────────────────────────
-    EXPECTED_SOURCES = ["adzuna", "jsearch", "greenhouse", "ashby"]
+    EXPECTED_SOURCES = ["jsearch", "greenhouse", "ashby"]
     logs_resp = (
         supabase.table("fetch_log")
         .select("*")
@@ -426,9 +526,6 @@ def main():
         .execute()
     )
     logs_by_source = {row["source"]: row for row in logs_resp.data}
-    adzuna_log = logs_by_source.get("adzuna")
-    jsearch_log = logs_by_source.get("jsearch")
-
     data_quality_notes = []
     missing = [s for s in EXPECTED_SOURCES if s not in logs_by_source]
     partial = [s for s, l in logs_by_source.items() if l["status"] == "partial"]
@@ -449,27 +546,39 @@ def main():
 
     log.info(f"data_quality_status={data_quality_status}")
 
-    # ── 1. VOLUME ────────────────────────────────────────────────────────────────
+    # ── 1. VOLUME + AI RATE ────────────────────────────────────────────────────
     # total_postings: distinct active PM openings across all sources, deduped by
     # (company, title). Employer boards use a 7-day last_seen_date window;
-    # feeds use a 30-day posted_date window (typical PM job posting duration).
-    # This replaces the old Adzuna raw count which over-counted by ~23x due to
-    # broad keyword matching in job descriptions rather than titles.
-    total_postings = compute_total_active_pm(supabase, target_date, PIPELINE_VERSION)
-    log.info(f"total_active_pm_postings (all sources, deduped)={total_postings}")
-    # new_postings_today: deduplicated count of jobs first ingested on
-    # target_date across all sources (see new_jobs_on() in migration 004).
-    new_jobs_resp = supabase.rpc(
-        "new_jobs_on", {"day": str(target_date), "version": PIPELINE_VERSION}
-    ).execute()
-    new_postings_today = new_jobs_resp.data
-    log.info(f"new_postings_today (deduped, all sources)={new_postings_today}")
+    # JSearch uses a 45-day posted_date window. All sources here return full
+    # job descriptions, so every active opening is also AI-eligible and the
+    # AI rate is computed over the same population.
+    total_postings, total_postings_ai = compute_total_active_pm(supabase, target_date, PIPELINE_VERSION)
+    log.info(
+        f"total_active_pm_postings={total_postings}  "
+        f"requiring_ai={total_postings_ai}"
+    )
+    ai_penetration_rate = (
+        round(total_postings_ai / total_postings * 100, 2)
+        if total_postings > 0 else None
+    )
+    log.info(
+        f"AI penetration over active openings: "
+        f"{total_postings_ai}/{total_postings} = {ai_penetration_rate}%"
+    )
+
+    # new_postings_today: distinct PM jobs first seen today across all sources,
+    # deduped by dedup_hash. PM-titled only (normalized_title != 'Other').
+    new_postings_today = compute_new_pm_postings_today(supabase, target_date, PIPELINE_VERSION)
+    log.info(f"new_pm_postings_today (PM-only, deduped)={new_postings_today}")
 
     # ── 2. ROLLING AVERAGES ───────────────────────────────────────────────────────
     total_postings_7day_avg = rolling_7day_avg(supabase, "total_postings", target_date)
     new_postings_7day_avg = rolling_7day_avg(supabase, "new_postings_today", target_date)
+    ai_penetration_7day_avg = rolling_7day_avg(supabase, "ai_penetration_rate", target_date)
 
-    # ── 3. AI PENETRATION RATE (daily rate, JSearch only) ────────────────────────
+    # ── 3. TODAY-ONLY AI SNAPSHOT (used only inside top_ai_skills below) ─────────
+    # Kept narrow because Section III intro counts come from the all-time
+    # full-text corpus, not from today's slice.
     todays_full_text = fetch_enriched_full_text(supabase, target_date)
     distinct_hashes = {r["dedup_hash"] for r in todays_full_text if r.get("dedup_hash")}
     ai_hashes = {
@@ -479,15 +588,6 @@ def main():
     }
     total_today = len(distinct_hashes)
     ai_today = len(ai_hashes)
-
-    ai_penetration_rate = (ai_today / total_today * 100) if total_today > 0 else None
-    ai_penetration_7day_avg = rolling_7day_avg(supabase, "ai_penetration_rate", target_date)
-
-    log.info(
-        f"AI penetration: {ai_today}/{total_today} = {ai_penetration_rate:.1f}%"
-        if ai_penetration_rate is not None
-        else "AI penetration: no data"
-    )
 
     # ── 4. TOP 10 AI SKILLS TODAY ────────────────────────────────────────────────
     todays_ai_records = [r for r in todays_full_text if r.get("has_ai_requirement")]
@@ -527,7 +627,7 @@ def main():
     ever_seen |= set(prev_7day_counts.keys())
 
     top_ai_skills = {
-        "total_ai_postings_today": len(todays_ai_records),
+        "total_ai_postings_today": ai_today,  # deduped by dedup_hash, full-text only
         "skills": [
             {
                 "rank": i + 1,
@@ -547,14 +647,16 @@ def main():
         ],
     }
 
-    # ── 5. TOP 10 COMPANIES (ALL SOURCES) ────────────────────────────────────────
-    # Count US PM openings active within the last 7 days across every source
-    # (Adzuna, JSearch, Greenhouse, Ashby, Lever). Counted per raw_id — each
-    # location-posting separately — and ranked by total PM openings. No AI
-    # filtering: this section is purely about hiring volume.
-    seven_day_start = target_date - timedelta(days=6)
+    # ── 5. TOP COMPANIES (UNIFIED: TOTAL + AI) ───────────────────────────────────
+    # One ranked list, joined with the AI cut. For each top-N company we expose:
+    #   total_count    — active PM openings
+    #   ai_count       — of those, how many require AI
+    #   ai_rate        — ai_count / total_count, rounded
+    #   postings       — drill-down list of the underlying openings
+    # Ranked by total_count (volume), since that's what answers "where are PMs
+    # being hired" — AI columns are an additional lens, not the ranking signal.
     active_pm_records = [
-        r for r in fetch_active_pm_records(supabase, seven_day_start, PIPELINE_VERSION)
+        r for r in fetch_active_pm_records(supabase, target_date, PIPELINE_VERSION)
         if r.get("normalized_title") != "Other"
     ]
     log.info(f"Active PM records after title filter: {len(active_pm_records)}")
@@ -573,26 +675,86 @@ def main():
         for c in prev_data.get("companies") or []:
             prev_totals[c["company"]] = c.get("total_count", 0)
 
-    current_total = count_companies(active_pm_records)
-    top_10_companies = sorted(current_total.items(), key=lambda x: x[1], reverse=True)[:10]
+    # Bucket records by company, deduped by dedup_hash, AI-flagged subset, and
+    # the raw_ids backing each bucket (used to look up drill-down details).
+    by_company: dict[str, dict] = {}
+    for r in active_pm_records:
+        comp = r.get("company_normalized") or ""
+        if not comp:
+            continue
+        comp = COMPANY_ALIASES.get(comp, comp)
+        bucket = by_company.setdefault(comp, {"hashes": set(), "ai_hashes": set(), "raw_ids": set()})
+        h = r.get("dedup_hash")
+        if h:
+            bucket["hashes"].add(h)
+            if r.get("has_ai_requirement"):
+                bucket["ai_hashes"].add(h)
+        if r.get("raw_id"):
+            bucket["raw_ids"].add(r["raw_id"])
 
-    # Snapshot key kept as top_employers_ai_skills for backward compatibility.
+    company_rows = [
+        {
+            "company": comp,
+            "total": len(b["hashes"]),
+            "ai":    len(b["ai_hashes"]),
+            "raw_ids": b["raw_ids"],
+        }
+        for comp, b in by_company.items()
+    ]
+    company_rows.sort(key=lambda c: (-c["total"], c["company"]))
+    top_companies_combined = company_rows[:10]
+
+    # Fetch drill-down details (title, location, posted_date, source) for the
+    # raw_ids in the top-N buckets only. We embed up to 12 postings per company
+    # to keep the JSONB blob small but still useful.
+    top_raw_ids = [rid for row in top_companies_combined for rid in row["raw_ids"]]
+    raw_detail_map: dict = {}
+    if top_raw_ids:
+        for i in range(0, len(top_raw_ids), 100):
+            batch = list(top_raw_ids)[i:i + 100]
+            resp = (
+                supabase.table("job_postings_raw")
+                .select("id,title,location,posted_date,source,source_id")
+                .in_("id", batch)
+                .execute()
+            )
+            for row in resp.data:
+                raw_detail_map[row["id"]] = row
+
     top_employers_ai_skills = {
-        "window_days": 7,
         "window_end": str(target_date),
-        "total_active_pm": len(active_pm_records),
+        "total_active_pm": total_postings,
+        "total_active_pm_ai": total_postings_ai,
         "companies": [
             {
-                "rank": i + 1,
-                "company": company,
-                "total_count": total_count,
-                "prev_total_count": prev_totals.get(company, 0),
-                "direction": company_direction(total_count, prev_totals.get(company, 0)),
+                "rank":        i + 1,
+                "company":     row["company"],
+                "total_count": row["total"],
+                "ai_count":    row["ai"],
+                "ai_rate":     round(row["ai"] / row["total"] * 100, 1) if row["total"] else 0.0,
+                "prev_total_count": prev_totals.get(row["company"], 0),
+                "direction":   company_direction(row["total"], prev_totals.get(row["company"], 0)),
+                "postings":    sorted(
+                    [
+                        {
+                            "title":       raw_detail_map[rid].get("title"),
+                            "location":    raw_detail_map[rid].get("location"),
+                            "posted_date": raw_detail_map[rid].get("posted_date"),
+                            "source":      raw_detail_map[rid].get("source"),
+                        }
+                        for rid in row["raw_ids"] if rid in raw_detail_map
+                    ],
+                    key=lambda p: (p.get("posted_date") or "", p.get("title") or ""),
+                    reverse=True,
+                )[:12],
             }
-            for i, (company, total_count) in enumerate(top_10_companies)
+            for i, row in enumerate(top_companies_combined)
         ],
     }
-    log.info(f"Top companies: {len(active_pm_records)} active PM postings across all sources")
+    log.info(
+        f"Top companies (combined): top10 totals "
+        f"{[(c['company'], c['total_count'], c['ai_count']) for c in top_employers_ai_skills['companies']]}"
+    )
 
     # ── 5b. AI SKILLS BY DOMAIN ──────────────────────────────────────────────────
     # Measured over every PM posting we hold a full description for — all
@@ -669,24 +831,17 @@ def main():
     domain_items.sort(key=lambda d: d["count"], reverse=True)
 
     top_ai_skills["domains"] = domain_items
+    # Active-population denominators for the domain cards. All-time corpus
+    # totals are still emitted (full_text_*) for backward compatibility with
+    # historical snapshots that referenced them.
+    top_ai_skills["active_total"] = total_postings
+    top_ai_skills["active_ai_total"] = total_postings_ai
+    top_ai_skills["active_ai_rate"] = ai_penetration_rate
     top_ai_skills["full_text_total"] = ft_total
     top_ai_skills["full_text_ai_total"] = len(ft_ai)
     top_ai_skills["full_text_ai_rate"] = ft_ai_rate
-
-    # Top companies by AI-requiring PM openings — same active 7-day window as
-    # Section II, filtered to postings where has_ai_requirement is True.
-    ai_active_records = [r for r in active_pm_records if r.get("has_ai_requirement")]
-    ai_active_counts = count_companies(ai_active_records)
-    top_10_ai_companies = sorted(
-        ai_active_counts.items(), key=lambda x: x[1], reverse=True
-    )[:10]
-    top_ai_skills["top_ai_employers"] = [
-        {"rank": i + 1, "company": company, "count": count}
-        for i, (company, count) in enumerate(top_10_ai_companies)
-    ]
-    top_ai_skills["top_ai_employers_window_end"] = str(target_date)
     log.info(
-        f"AI skills: {ft_total} full-text postings, {len(ft_ai)} require AI "
+        f"AI skills: {ft_total} full-text postings (all-time), {len(ft_ai)} require AI "
         f"({ft_ai_rate}%); {sum(1 for d in domain_items if d['count'] > 0)}/{len(domain_items)} domains with signal"
     )
 

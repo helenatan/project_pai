@@ -275,23 +275,26 @@ def write_fetch_log(supabase: Client, run_date: date, result: dict):
 
 
 def main():
-    run_date = yesterday()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run-date", default=None, help="Override run date (YYYY-MM-DD)")
+    args = parser.parse_args()
+    run_date = date.fromisoformat(args.run_date) if args.run_date else yesterday()
     log.info(f"Starting fetch for run_date={run_date}")
 
     supabase = get_supabase()
 
-    adzuna_result = fetch_adzuna(supabase, run_date)
-    write_fetch_log(supabase, run_date, adzuna_result)
-
+    # Adzuna is no longer ingested. Its descriptions are truncated to ~500
+    # characters, which is incompatible with our AI-keyword analysis. JSearch
+    # plus the employer-board fetch (run from fetch_employers.py) supply
+    # complete job descriptions across all sources.
     jsearch_result = fetch_jsearch(supabase, run_date)
     write_fetch_log(supabase, run_date, jsearch_result)
 
-    log.info(
-        f"Fetch complete. Adzuna: {adzuna_result['status']}, JSearch: {jsearch_result['status']}"
-    )
+    log.info(f"Fetch complete. JSearch: {jsearch_result['status']}")
 
-    if adzuna_result["status"] == "failed" or jsearch_result["status"] == "failed":
-        log.error("One or more sources failed. Exiting non-zero to fail the pipeline.")
+    if jsearch_result["status"] == "failed":
+        log.error("JSearch failed. Exiting non-zero to fail the pipeline.")
         sys.exit(1)
 
 

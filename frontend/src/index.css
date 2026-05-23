@@ -37,7 +37,6 @@ body::before {
 .issue-meta { font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-light); }
 .publication-name { font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 6vw, 3.8rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
 .publication-sub { font-family: 'Lora', serif; font-size: 0.95rem; font-style: italic; color: var(--ink-light); margin-top: 0.4rem; }
-.masthead-rule { border: none; border-top: 1px solid var(--ink); margin: 1rem 0 0.5rem; }
 .masthead-bottom { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .narrative-badge {
   display: inline-flex; align-items: center; gap: 0.5rem;
@@ -50,14 +49,19 @@ body::before {
 
 /* ── RAMP NOTICE ── */
 .ramp-notice {
-  display: flex; align-items: flex-start; gap: 1rem;
-  padding: 1.1rem 1.25rem;
-  background: rgba(160,96,16,0.06); border: 1px solid rgba(160,96,16,0.25); border-left: 3px solid var(--signal-amber);
+  display: flex; align-items: flex-start; gap: 1.1rem;
+  padding: 1rem 1.4rem 1rem 1.2rem;
+  background: rgba(160,96,16,0.035); border: 1px solid rgba(160,96,16,0.18); border-left: 2px solid var(--signal-amber);
   margin: 1.5rem 0 0;
 }
 .ramp-icon { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--signal-amber); flex-shrink: 0; margin-top: 1px; letter-spacing: 0.08em; }
 .ramp-text { font-family: 'Lora', serif; font-size: 0.9rem; line-height: 1.7; color: var(--ink-mid); }
+.ramp-text p { margin: 0; }
+.ramp-text p + p { margin-top: 0.55rem; }
 .ramp-text strong { font-weight: 600; font-style: normal; color: var(--ink); }
+.ramp-pointer { color: var(--ink-light); font-style: italic; font-size: 0.85rem; }
+.ramp-link { color: var(--signal-amber); text-decoration: none; border-bottom: 1px solid rgba(160,96,16,0.35); font-style: normal; }
+.ramp-link:hover { border-bottom-color: var(--signal-amber); }
 .ramp-progress { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.65rem; }
 .ramp-bar-wrap { flex: 1; height: 5px; background: var(--paper-rule); border-radius: 3px; max-width: 200px; }
 .ramp-bar { height: 100%; background: var(--signal-amber); border-radius: 3px; }
@@ -89,6 +93,7 @@ body::before {
 .metric-delta { font-family: 'DM Mono', monospace; font-size: 0.7rem; margin-top: 0.4rem; color: var(--ink-faint); }
 .metric-delta.up { color: var(--signal-green); }
 .metric-delta.down { color: var(--signal-red); }
+.metric-delta.muted { color: var(--ink-faint); font-style: italic; }
 .metric-note { font-family: 'DM Mono', monospace; font-size: 0.63rem; margin-top: 0.3rem; color: var(--ink-faint); opacity: 0.7; }
 
 /* ── SECTION HEADER ── */
@@ -145,8 +150,8 @@ body::before {
   animation: stubPulse 2.5s ease-in-out infinite;
 }
 @keyframes stubPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.15} 50%{transform:translate(-50%,-50%) scale(1.8);opacity:0.04} }
-.stub-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); line-height: 1.65; flex: 1; }
-.stub-label strong { color: var(--ink-mid); font-style: normal; font-family: 'Lora', serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 0; text-transform: none; display: block; margin-bottom: 0.25rem; }
+.stub-label { font-family: 'Lora', serif; font-size: 0.88rem; color: var(--ink-light); line-height: 1.7; flex: 1; font-style: italic; }
+.stub-label strong { color: var(--ink); font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; font-style: normal; letter-spacing: -0.01em; display: block; margin-bottom: 0.4rem; }
 
 /* ── COUNT-BAR PANELS ── */
 .count-bar-section { border-bottom: 1px solid var(--paper-rule); }
@@ -172,18 +177,31 @@ body::before {
 /* Top Companies — column table (ranked by total PM openings) */
 .co-table { display: grid; grid-template-columns: 20px 1fr 58px 58px; gap: 0.95rem 0.7rem; align-items: baseline; padding-top: 1.15rem; max-width: 520px; }
 .co-table-simple { grid-template-columns: 20px 1fr; }
+/* Combined: rank | company+bar | total | ai | %ai */
+.co-table-combined { grid-template-columns: 20px 1fr 70px 70px 56px; max-width: 700px; column-gap: 0.6rem; }
+.co-table-combined .co-th { white-space: nowrap; }
 .co-th { font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
 .co-th.total { text-align: right; }
 .co-th.ai { color: var(--signal-amber); text-align: right; }
+.co-th.rate { color: var(--signal-amber); text-align: right; }
 .co-table-rule { grid-column: 1 / -1; border-bottom: 1px solid var(--ink); }
 .co-rank { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--ink-faint); text-align: right; }
 .co-main { display: flex; flex-direction: column; gap: 0.32rem; }
+.co-main-clickable { cursor: pointer; padding: 2px 4px; margin: -2px -4px; border-radius: 3px; transition: background 0.12s ease; }
+.co-main-clickable:hover { background: rgba(160,96,16,0.06); }
+.co-main-clickable:focus { outline: 2px solid rgba(160,96,16,0.4); outline-offset: 1px; }
 .co-name-row { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
 .co-name { font-family: 'Lora', serif; font-size: 0.9rem; color: var(--ink-mid); line-height: 1.2; }
 .co-total-num { font-family: 'DM Mono', monospace; font-size: 0.95rem; font-weight: 700; color: var(--ink-mid); }
+.co-num { font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 700; color: var(--ink-mid); text-align: right; }
+.co-num-ai { color: var(--signal-amber); }
+.co-num-rate { color: var(--signal-amber); }
 .co-bar-track { height: 8px; background: #ece7df; border-radius: 4px; position: relative; overflow: hidden; }
 .co-bar-total { position: absolute; left: 0; top: 0; height: 100%; background: #c2cedb; border-radius: 4px; }
 .co-bar-ai { position: absolute; left: 0; top: 0; height: 100%; background: var(--signal-amber); border-radius: 4px; }
+/* Combined-table layered bar: faint dark blue total underneath, amber AI overlay on top */
+.co-bar-total-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--signal-blue); opacity: 0.22; border-radius: 4px; }
+.co-bar-ai-fill    { position: absolute; left: 0; top: 0; height: 100%; background: var(--signal-amber); border-radius: 4px; z-index: 1; }
 .co-ai-num { font-family: 'DM Mono', monospace; font-size: 0.95rem; font-weight: 700; color: var(--signal-amber); text-align: right; }
 .co-bar-legend { display: flex; gap: 1.25rem; margin-top: 1rem; font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--ink-faint); letter-spacing: 0.04em; }
 .co-bar-legend .sw { display: inline-block; width: 10px; height: 6px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
@@ -194,6 +212,40 @@ body::before {
 .co-count-col { text-align: right; }
 .co-list { padding-top: 1rem; max-width: 480px; }
 
+/* ── DRAWER (company drill-down) ── */
+.drawer-overlay {
+  position: fixed; inset: 0;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6vh 1rem 2rem;
+  z-index: 100;
+  animation: drawerFade 0.18s ease forwards;
+}
+@keyframes drawerFade { from { opacity: 0 } to { opacity: 1 } }
+.drawer {
+  background: #fbf8f1;
+  border: 1px solid var(--paper-rule);
+  border-radius: 8px;
+  width: 100%; max-width: 580px; max-height: 80vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 16px 48px rgba(28,25,23,0.18);
+  animation: drawerSlide 0.22s ease forwards;
+}
+@keyframes drawerSlide { from { transform: translateY(8px); opacity: 0 } to { transform: none; opacity: 1 } }
+.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.1rem 1.25rem 0.8rem; border-bottom: 1px solid var(--paper-rule); }
+.drawer-eyebrow { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.25rem; }
+.drawer-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 600; color: var(--ink); margin: 0; letter-spacing: -0.01em; }
+.drawer-sub { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--signal-amber); margin-top: 0.4rem; letter-spacing: 0.02em; }
+.drawer-close { background: none; border: none; font-size: 1.6rem; color: var(--ink-light); cursor: pointer; line-height: 1; padding: 0 0.25rem; border-radius: 4px; }
+.drawer-close:hover { color: var(--ink); }
+.drawer-list { list-style: none; padding: 0.5rem 1.25rem; margin: 0; overflow-y: auto; flex: 1; }
+.drawer-item { padding: 0.65rem 0; border-bottom: 1px solid var(--paper-rule); }
+.drawer-item:last-child { border-bottom: none; }
+.drawer-item-title { font-family: 'Lora', serif; font-size: 0.95rem; color: var(--ink); line-height: 1.35; }
+.drawer-item-meta { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-faint); margin-top: 0.25rem; letter-spacing: 0.02em; }
+.drawer-empty { font-style: italic; color: var(--ink-faint); font-family: 'Lora', serif; }
+.drawer-foot { padding: 0.6rem 1.25rem 1rem; font-family: 'Lora', serif; font-size: 0.78rem; font-style: italic; color: var(--ink-faint); margin: 0; border-top: 1px solid var(--paper-rule); }
+
 /* ── DOMAIN CARDS ── */
 .domain-intro {
   font-family: 'Lora', serif;
@@ -203,7 +255,7 @@ body::before {
   padding: 0.85rem 0 1.25rem;
   border-bottom: 1px solid var(--paper-rule);
 }
-.domain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1.15rem 0; }
+.domain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1.15rem 0; align-items: start; }
 .domain-card {
   border: 1px solid var(--paper-rule);
   border-radius: 6px;
@@ -217,6 +269,7 @@ body::before {
 .domain-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
 .domain-count-block { text-align: right; flex-shrink: 0; }
 .domain-count-num { font-family: 'DM Mono', monospace; font-size: 1.05rem; font-weight: 700; color: var(--signal-amber); line-height: 1; }
+.domain-count-denom { font-weight: 400; color: var(--ink-faint); font-size: 0.85rem; letter-spacing: 0; }
 .domain-count-label { font-family: 'DM Mono', monospace; font-size: 0.52rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-faint); margin-top: 2px; }
 .domain-def { font-family: 'Lora', serif; font-size: 0.82rem; line-height: 1.6; color: var(--ink-light); font-style: italic; }
 .domain-rule { border: none; border-top: 1px solid var(--paper-rule); margin: 0.85rem 0 0.8rem; }
@@ -231,7 +284,9 @@ body::before {
 .domain-quotebox {
   border-left: 2px solid var(--signal-amber);
   padding-left: 0.8rem;
-  margin-top: auto;
+  /* Quote follows the rule line naturally — no margin-top:auto, which would
+     push it to the bottom of a stretched card and create uneven whitespace
+     when neighboring cards have different content heights. */
 }
 .domain-quote {
   font-family: 'Lora', serif;
@@ -250,8 +305,11 @@ body::before {
 
 /* ── FOOTER ── */
 .footer { border-top: 1px solid var(--paper-rule); padding: 2rem 0 3rem; display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 1.5rem; }
-.footer-methodology { font-family: 'Lora', serif; font-size: 0.85rem; line-height: 1.75; color: var(--ink-light); font-style: italic; }
+.footer-methodology { font-family: 'Lora', serif; font-size: 0.85rem; line-height: 1.75; color: var(--ink-light); font-style: italic; scroll-margin-top: 1rem; }
 .footer-methodology .footer-mlabel { font-style: normal; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); display: block; margin-bottom: 0.6rem; }
+.footer-methodology .footer-mblock { margin: 0; }
+.footer-methodology .footer-mblock + .footer-mblock { margin-top: 0.7rem; }
+.footer-methodology .footer-mblock strong { font-style: normal; font-weight: 600; color: var(--ink); }
 .footer-meta { text-align: right; }
 .footer-label { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.4rem; }
 .footer-cite { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--ink-light); line-height: 1.7; }

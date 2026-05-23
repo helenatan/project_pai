@@ -301,10 +301,13 @@ def write_fetch_log(supabase: Client, run_date: date, result: dict):
 
 
 def main():
-    # Align with fetch.py: write fetch_log + posted_date as `yesterday`
-    # so the aggregator (which runs for target_date=yesterday) picks up
-    # today's freshly-ingested rows.
-    run_date = date.today() - timedelta(days=1)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run-date", default=None, help="Override run date (YYYY-MM-DD)")
+    args = parser.parse_args()
+    # Default: yesterday, so the aggregator (which runs for target_date=yesterday)
+    # picks up today's freshly-ingested rows.
+    run_date = date.fromisoformat(args.run_date) if args.run_date else date.today() - timedelta(days=1)
     log.info(f"Starting employer-board fetch for run_date={run_date}")
 
     supabase = get_supabase()

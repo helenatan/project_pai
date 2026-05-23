@@ -25,14 +25,41 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
 TITLE_PATTERNS = [
-    # Order matters: more specific patterns before less specific
+    # Order matters: more specific patterns before less specific.
+    # Each pattern is a substring matched against the lowercased raw title.
     ("CPO",       ["chief product officer", "cpo"]),
-    ("VP",        ["vp of product", "vice president of product", "vp product", "head of product"]),
-    ("Director",  ["director of product", "director product", "group product manager", "gpm"]),
-    ("Staff PM",  ["staff product manager", "principal product manager"]),
-    ("Senior PM", ["senior product manager", "sr. product manager", "sr product manager", "product manager iii"]),
-    ("APM",       ["associate product manager", "junior product manager", "apm"]),
-    ("PM",        ["product manager", " pm ", "product manager i", "product manager ii"]),
+    ("VP",        [
+        "vp of product", "vice president of product", "vp product", "head of product",
+        "vp, product management",           # "VP, Product Management, ..."
+    ]),
+    ("Director",  [
+        "director of product", "director product", "group product manager", "gpm",
+        "director, product management",     # "Director, Product Management"
+        "director, product owner",          # "Director, Product Owner"
+    ]),
+    ("Staff PM",  [
+        "staff product manager", "principal product manager",
+        "principal product owner",
+    ]),
+    ("Senior PM", [
+        "senior product manager", "sr. product manager", "sr product manager",
+        "product manager iii",
+        "senior product owner", "sr. product owner", "sr product owner",
+        "sr product mgr", "sr. product mgr",        # abbreviated senior PM
+        "manager, product management",              # managing PM work = senior PM equiv
+    ]),
+    ("APM",       [
+        "associate product manager", "junior product manager", "apm",
+        "associate product owner", "junior product owner",
+    ]),
+    ("PM",        [
+        "product manager", " pm ", "product manager i", "product manager ii",
+        "product owner",        # "Product Owner", "IT Product Owner", etc.
+        "product management",   # "Director, Product Mgmt" caught above; catches the rest
+        "product mgr",          # abbreviated: "Sr Product Mgr", "Sr. Product Mgr"
+        "product mgmt",         # abbreviated: "Product Mgmt/Strategy"
+        "product lead",         # startup PM equivalent: "Product Lead, AI"
+    ]),
 ]
 
 SENIORITY_MAP = {

@@ -39,11 +39,12 @@ const DOMAINS = [
   },
 ]
 
-function DomainCard({ domain, domainData, wide }) {
+function DomainCard({ domain, domainData, wide, sampleSize }) {
   const count = domainData?.count ?? 0
   const quote = domainData?.quote || null
   const company = domainData?.company || null
   const hasSignal = count > 0
+  const pct = sampleSize ? Math.round((count / sampleSize) * 100) : null
 
   return (
     <div className={`domain-card${wide ? ' domain-card-wide' : ''}`}>
@@ -51,8 +52,19 @@ function DomainCard({ domain, domainData, wide }) {
         <h3 className="domain-name">{domain.name}</h3>
         {hasSignal && (
           <div className="domain-count-block">
-            <div className="domain-count-num">{count.toLocaleString()}</div>
-            <div className="domain-count-label">postings</div>
+            {pct != null ? (
+              <>
+                <div className="domain-count-num">{pct}%</div>
+                <div className="domain-count-label">
+                  {count.toLocaleString()} of {sampleSize.toLocaleString()} postings
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="domain-count-num">{count.toLocaleString()}</div>
+                <div className="domain-count-label">postings</div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -83,9 +95,14 @@ export default function SkillsPanel({ snapshot }) {
   const tas = snapshot?.top_ai_skills || {}
   const domains = tas.domains || tas.domain_quotes || []
   const dataMap = Object.fromEntries(domains.map((d) => [d.slug, d]))
-  const ftTotal = tas.full_text_total ?? null
-  const ftAiTotal = tas.full_text_ai_total ?? null
-  const ftAiRate = tas.full_text_ai_rate ?? null
+
+  // Active-population denominators (preferred). Fall back to the older
+  // full-text-corpus fields for back-compat with snapshots written before
+  // active_* was added.
+  const totalActive = tas.active_total ?? snapshot?.total_postings ?? null
+  const activeAi = tas.active_ai_total ?? null
+  const activeRate = tas.active_ai_rate ?? snapshot?.ai_penetration_rate ?? null
+  const sampleSize = totalActive
 
   // Rank cards by posting count — most in-demand domains first.
   // Stable sort keeps the declared DOMAINS order for ties (incl. zero-signal).
@@ -96,19 +113,17 @@ export default function SkillsPanel({ snapshot }) {
   return (
     <section>
       <div className="section-header">
-        <span className="section-title">III. AI Skills by Domain</span>
-        <span className="section-meta">7 categories · ranked by demand</span>
+        <span className="section-title">III. The AI Skills in Demand</span>
+        <span className="section-meta">7 domains · ranked by mention rate</span>
       </div>
       <p className="domain-intro">
-        {ftTotal != null
-          ? `Based on the ${ftTotal.toLocaleString()} PM postings we hold a complete job description for`
-          : 'Based on the PM postings we hold a complete job description for'}
-        {ftAiTotal != null && ftAiRate != null
-          ? ` — ${ftAiTotal.toLocaleString()} of them (${ftAiRate}%) require AI skills.`
-          : '.'}
-        {' '}Each card counts how many of those AI postings name a given domain;
-        a posting can span several domains, so counts overlap and aren&rsquo;t
-        expected to sum.
+        Of the {sampleSize != null ? <strong>{sampleSize.toLocaleString()}</strong> : null} active
+        US PM openings,{' '}
+        {activeAi != null && activeRate != null ? (
+          <><strong>{activeAi.toLocaleString()} ({Math.round(Number(activeRate))}%)</strong> explicitly require AI skills.</>
+        ) : 'a portion require AI skills.'}{' '}
+        Each card below shows how many of those openings call out a given domain. A posting can
+        span several domains, so percentages overlap and aren&rsquo;t expected to sum.
       </p>
       <div className="domain-grid">
         {orderedDomains.map((d, i) => (
@@ -116,6 +131,7 @@ export default function SkillsPanel({ snapshot }) {
             key={d.slug}
             domain={d}
             domainData={dataMap[d.slug]}
+            sampleSize={sampleSize}
             wide={i === orderedDomains.length - 1}
           />
         ))}
