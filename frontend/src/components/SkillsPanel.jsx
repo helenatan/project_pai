@@ -43,6 +43,8 @@ function DomainCard({ domain, domainData, wide, sampleSize }) {
   const count = domainData?.count ?? 0
   const quote = domainData?.quote || null
   const company = domainData?.company || null
+  const title = domainData?.title || null
+  const url = domainData?.url || null
   const hasSignal = count > 0
   const pct = sampleSize ? Math.round((count / sampleSize) * 100) : null
 
@@ -76,7 +78,20 @@ function DomainCard({ domain, domainData, wide, sampleSize }) {
           <hr className="domain-rule" />
           <div className="domain-quotebox">
             <p className="domain-quote">&ldquo;{quote}&rdquo;</p>
-            {company && <p className="domain-quote-cite">— {company}</p>}
+            {(company || title) && (
+              <p className="domain-quote-cite">
+                {'— '}
+                {title && url ? (
+                  <a className="domain-quote-link" href={url} target="_blank" rel="noopener noreferrer">
+                    {title}<span className="domain-quote-arrow" aria-hidden> ↗</span>
+                  </a>
+                ) : title ? (
+                  <span>{title}</span>
+                ) : null}
+                {title && company && <span className="domain-quote-sep">, </span>}
+                {company && <span className="domain-quote-co">{company}</span>}
+              </p>
+            )}
           </div>
         </>
       )}
