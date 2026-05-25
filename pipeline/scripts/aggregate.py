@@ -677,7 +677,9 @@ def main():
 
     # Bucket records by company, deduped by dedup_hash, AI-flagged subset, and
     # the raw_ids backing each bucket (used to look up drill-down details).
+    # Also track per-raw-id AI flag so the drill-down can mark individual postings.
     by_company: dict[str, dict] = {}
+    raw_id_is_ai: dict = {}
     for r in active_pm_records:
         comp = r.get("company_normalized") or ""
         if not comp:
@@ -689,8 +691,11 @@ def main():
             bucket["hashes"].add(h)
             if r.get("has_ai_requirement"):
                 bucket["ai_hashes"].add(h)
-        if r.get("raw_id"):
-            bucket["raw_ids"].add(r["raw_id"])
+        rid = r.get("raw_id")
+        if rid:
+            bucket["raw_ids"].add(rid)
+            if r.get("has_ai_requirement"):
+                raw_id_is_ai[rid] = True
 
     company_rows = [
         {
@@ -714,7 +719,7 @@ def main():
             batch = list(top_raw_ids)[i:i + 100]
             resp = (
                 supabase.table("job_postings_raw")
-                .select("id,title,location,posted_date,source,source_id")
+                .select("id,title,location,posted_date,source,source_id,url")
                 .in_("id", batch)
                 .execute()
             )
@@ -741,10 +746,16 @@ def main():
                             "location":    raw_detail_map[rid].get("location"),
                             "posted_date": raw_detail_map[rid].get("posted_date"),
                             "source":      raw_detail_map[rid].get("source"),
+                            "url":         raw_detail_map[rid].get("url"),
+                            "has_ai":      bool(raw_id_is_ai.get(rid, False)),
                         }
                         for rid in row["raw_ids"] if rid in raw_detail_map
                     ],
-                    key=lambda p: (p.get("posted_date") or "", p.get("title") or ""),
+                    key=lambda p: (
+                        1 if p.get("has_ai") else 0,
+                        p.get("posted_date") or "",
+                        p.get("title") or "",
+                    ),
                     reverse=True,
                 )[:12],
             }
@@ -813,7 +824,7 @@ def main():
     desc_by_raw_id: dict[int, dict] = {}
     if all_sample_raw_ids:
         raw_rows = _batched_in(
-            supabase, "job_postings_raw", "id,company,description_text", all_sample_raw_ids
+            supabase, "job_postings_raw", "id,company,title,url,description_text", all_sample_raw_ids
         )
         for row in raw_rows:
             desc_by_raw_id[row["id"]] = row
@@ -827,6 +838,8 @@ def main():
             "count":   domain_counts.get(slug, 0),
             "quote":   extract_quote_snippet(raw.get("description_text") or "", keywords) if raw else None,
             "company": (raw.get("company") or None) if raw else None,
+            "title":   (raw.get("title") or None) if raw else None,
+            "url":     (raw.get("url") or None) if raw else None,
         })
     domain_items.sort(key=lambda d: d["count"], reverse=True)
 

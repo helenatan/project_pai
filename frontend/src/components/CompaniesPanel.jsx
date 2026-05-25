@@ -54,15 +54,29 @@ function PostingsDrawer({ company, onClose }) {
           <button className="drawer-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <ul className="drawer-list">
-          {postings.map((p, i) => (
-            <li key={i} className="drawer-item">
-              <div className="drawer-item-title">{p.title || '—'}</div>
-              <div className="drawer-item-meta">
-                {[p.location, p.source ? `via ${p.source}` : null, fmtDate(p.posted_date)]
-                  .filter(Boolean).join(' · ')}
-              </div>
-            </li>
-          ))}
+          {postings.map((p, i) => {
+            const titleText = p.title || '—'
+            const titleEl = p.url ? (
+              <a className="drawer-item-link" href={p.url} target="_blank" rel="noopener noreferrer">
+                {titleText}
+                <span className="drawer-item-arrow" aria-hidden>↗</span>
+              </a>
+            ) : (
+              <span>{titleText}</span>
+            )
+            return (
+              <li key={i} className="drawer-item">
+                <div className="drawer-item-title">
+                  {titleEl}
+                  {p.has_ai && <span className="drawer-ai-tag" title="Requires AI skills">AI</span>}
+                </div>
+                <div className="drawer-item-meta">
+                  {[p.location, p.source ? `via ${p.source}` : null, fmtDate(p.posted_date)]
+                    .filter(Boolean).join(' · ')}
+                </div>
+              </li>
+            )
+          })}
           {!postings.length && (
             <li className="drawer-item drawer-empty">No posting details available.</li>
           )}
