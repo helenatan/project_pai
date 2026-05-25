@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from './lib/supabase'
 import Header from './components/Header'
-import RampNotice from './components/RampNotice'
 import Digest from './components/Digest'
 import HeroMetrics from './components/HeroMetrics'
 import VolumeChart from './components/VolumeChart'
 import SkillsPanel from './components/SkillsPanel'
 import CompaniesPanel from './components/CompaniesPanel'
+import RampNotice from './components/RampNotice'
 import Footer from './components/Footer'
 
 const COLUMNS = [
@@ -24,9 +24,30 @@ const COLUMNS = [
   'digest_generated_at',
 ].join(',')
 
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem('pai-theme')
+    if (saved) return saved
+  } catch {}
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 export default function App() {
   const [snapshots, setSnapshots] = useState(null)
   const [error, setError] = useState(null)
+  const [theme, setTheme] = useState(getInitialTheme)
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => {
+      const next = t === 'dark' ? 'light' : 'dark'
+      try { localStorage.setItem('pai-theme', next) } catch {}
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     supabase
@@ -40,49 +61,80 @@ export default function App() {
       })
   }, [])
 
+  const today = snapshots?.at(-1)
+  const latestDigest = snapshots?.filter((s) => s.summary_text).at(-1)
+  const hasPartialData = today?.data_quality_status === 'partial'
+  const daysOfData = snapshots?.length ?? 0
+
+  const lastUpdated = today?.snapshot_date
+    ? new Date(today.snapshot_date + 'T00:00:00').toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+      })
+    : null
+
   if (error) {
     return (
-      <div className="page">
-        <Header />
-        <p className="state-msg error">Failed to load data: {error}</p>
-      </div>
+      <>
+        <Header theme={theme} onToggle={toggleTheme} />
+        <div className="page">
+          <p className="state-msg error">Failed to load data: {error}</p>
+        </div>
+      </>
     )
   }
 
   if (!snapshots) {
     return (
-      <div className="page">
-        <Header />
-        <p className="state-msg">Loading…</p>
-      </div>
+      <>
+        <Header theme={theme} onToggle={toggleTheme} />
+        <div className="page">
+          <p className="state-msg">Loading…</p>
+        </div>
+      </>
     )
   }
 
   if (!snapshots.length) {
     return (
-      <div className="page">
-        <Header />
-        <p className="state-msg">No snapshots recorded yet.</p>
-      </div>
+      <>
+        <Header theme={theme} onToggle={toggleTheme} />
+        <div className="page">
+          <p className="state-msg">No snapshots recorded yet.</p>
+        </div>
+      </>
     )
   }
 
-  const today = snapshots.at(-1)
-  const latestDigest = snapshots.filter((s) => s.summary_text).at(-1)
-  // Days of data we hold (used to gate trend deltas — comparisons aren't
-  // meaningful until we've accumulated a real prior period).
-  const daysOfData = snapshots.length
-
   return (
-    <div className="page">
-      <Header today={today} />
-      <RampNotice snapshot={today} />
-      <Digest snapshot={latestDigest} />
-      <HeroMetrics snapshot={today} daysOfData={daysOfData} />
-      <VolumeChart snapshots={snapshots} />
-      <CompaniesPanel snapshot={today} />
-      <SkillsPanel snapshot={today} />
-      <Footer snapshot={today} />
-    </div>
+    <>
+      <Header theme={theme} onToggle={toggleTheme} />
+      <div className="page">
+        <h1 className="hed">How AI Is Reshaping PM Hiring</h1>
+        <p className="dek">
+          An empirical observatory built on daily job postings — tracking how much of US product
+          manager hiring now requires AI skills, updated every morning.
+        </p>
+
+        <div className="byline">
+          <span><span className="live-dot" />Live data</span>
+          {lastUpdated && <span>Updated {lastUpdated}</span>}
+          <span>Adzuna · JSearch · Greenhouse</span>
+        </div>
+
+        {hasPartialData && (
+          <div className="data-warning">
+            Today's data may be incomplete — one or more sources encountered issues.
+          </div>
+        )}
+
+        <RampNotice snapshot={today} />
+        <Digest snapshot={latestDigest} />
+        <HeroMetrics snapshot={today} daysOfData={daysOfData} />
+        <VolumeChart snapshots={snapshots} theme={theme} />
+        <CompaniesPanel snapshot={today} />
+        <SkillsPanel snapshot={today} />
+        <Footer snapshot={today} />
+      </div>
+    </>
   )
 }

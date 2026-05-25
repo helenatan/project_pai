@@ -1,41 +1,41 @@
-// AI Skills by Domain — the 7 tracked categories from the ai_keywords taxonomy.
+// AI Skills by Domain — 7 tracked categories from the ai_keywords taxonomy.
 // Counts and quotes come live from snapshot.top_ai_skills.domains, computed
 // over active US PM postings that require AI (see pipeline/scripts/aggregate.py).
 const DOMAINS = [
   {
     slug: 'model_fluency',
     name: 'Model Fluency',
-    def: "The ability to reason about what AI models can and can't do — the conceptual foundation every AI PM needs before building anything",
+    def: "Reasoning about what AI models can and can't do — the conceptual foundation every AI PM needs before building anything.",
   },
   {
     slug: 'ai_building',
     name: 'AI Building Blocks',
-    def: 'The ability to understand and spec the technical components that power AI features — from prompts and RAG to embeddings and fine-tuning',
+    def: 'Understanding and spec’ing the technical components that power AI features — from prompts and RAG to embeddings and fine-tuning.',
   },
   {
     slug: 'agentic_systems',
     name: 'Agentic Systems',
-    def: 'The ability to design products where AI takes multi-step actions autonomously — the defining shift from assistive tools to autonomous product experiences',
+    def: 'Designing products where AI takes multi-step actions autonomously — the defining shift from assistive tools to autonomous product experiences.',
   },
   {
     slug: 'evals',
     name: 'Evals & Quality',
-    def: 'The ability to define what "good" looks like for an AI feature and build the systems to measure it — increasingly the core PM accountability in AI products',
+    def: 'Defining what "good" looks like for an AI feature and building the systems to measure it — increasingly the core PM accountability in AI products.',
   },
   {
     slug: 'ai_safety',
     name: 'AI Safety',
-    def: 'The ability to identify risks in AI behavior and ship products that are trustworthy, fair, and compliant — a fast-growing PM specialty at AI-first companies',
+    def: 'Identifying risks in AI behavior and shipping products that are trustworthy, fair, and compliant — a fast-growing PM specialty at AI-first companies.',
   },
   {
     slug: 'ai_deployment',
     name: 'AI Deployment',
-    def: 'The ability to own AI systems in production — understanding reliability, latency, cost, and what it takes to keep an AI product healthy at scale',
+    def: 'Owning AI systems in production — understanding reliability, latency, cost, and what it takes to keep an AI product healthy at scale.',
   },
   {
     slug: 'ai_product_vision',
     name: 'AI Product Vision',
-    def: 'The ability to set a long-term AI direction for a product — translating model capabilities into a coherent strategy, roadmap, and competitive positioning',
+    def: 'Setting a long-term AI direction — translating model capabilities into a coherent strategy, roadmap, and competitive positioning.',
   },
 ]
 
@@ -55,14 +55,14 @@ function DomainCard({ domain, domainData, wide, sampleSize }) {
             {pct != null ? (
               <>
                 <div className="domain-count-num">{pct}%</div>
-                <div className="domain-count-label">
-                  {count.toLocaleString()} of {sampleSize.toLocaleString()} postings
+                <div className="domain-count-denom">
+                  {count.toLocaleString()} of {sampleSize.toLocaleString()}
                 </div>
               </>
             ) : (
               <>
                 <div className="domain-count-num">{count.toLocaleString()}</div>
-                <div className="domain-count-label">postings</div>
+                <div className="domain-count-denom">postings</div>
               </>
             )}
           </div>
@@ -84,7 +84,7 @@ function DomainCard({ domain, domainData, wide, sampleSize }) {
       {!hasSignal && (
         <>
           <hr className="domain-rule" />
-          <span className="nodata-label">No signal yet · tracking early mentions</span>
+          <span className="domain-nodata">No signal yet — tracking early mentions</span>
         </>
       )}
     </div>
@@ -97,8 +97,7 @@ export default function SkillsPanel({ snapshot }) {
   const dataMap = Object.fromEntries(domains.map((d) => [d.slug, d]))
 
   // Active-population denominators (preferred). Fall back to the older
-  // full-text-corpus fields for back-compat with snapshots written before
-  // active_* was added.
+  // full-text-corpus fields for snapshots written before active_* was added.
   const totalActive = tas.active_total ?? snapshot?.total_postings ?? null
   const activeAi = tas.active_ai_total ?? null
   const activeRate = tas.active_ai_rate ?? snapshot?.ai_penetration_rate ?? null
@@ -111,19 +110,22 @@ export default function SkillsPanel({ snapshot }) {
   )
 
   return (
-    <section>
-      <div className="section-header">
-        <span className="section-title">III. The AI Skills in Demand</span>
+    <section className="section-block">
+      <div className="section-rule">
+        <span className="section-title">AI Skills in Demand</span>
         <span className="section-meta">7 domains · ranked by mention rate</span>
       </div>
       <p className="domain-intro">
         Of the {sampleSize != null ? <strong>{sampleSize.toLocaleString()}</strong> : null} active
         US PM openings,{' '}
         {activeAi != null && activeRate != null ? (
-          <><strong>{activeAi.toLocaleString()} ({Math.round(Number(activeRate))}%)</strong> explicitly require AI skills.</>
+          <>
+            <strong>{activeAi.toLocaleString()} ({Math.round(Number(activeRate))}%)</strong>{' '}
+            explicitly require AI skills.
+          </>
         ) : 'a portion require AI skills.'}{' '}
-        Each card below shows how many of those openings call out a given domain. A posting can
-        span several domains, so percentages overlap and aren&rsquo;t expected to sum.
+        Each card shows how many of those openings call out a given domain. A posting can span
+        several domains, so percentages overlap and aren&rsquo;t expected to sum.
       </p>
       <div className="domain-grid">
         {orderedDomains.map((d, i) => (
@@ -132,7 +134,7 @@ export default function SkillsPanel({ snapshot }) {
             domain={d}
             domainData={dataMap[d.slug]}
             sampleSize={sampleSize}
-            wide={i === orderedDomains.length - 1}
+            wide={orderedDomains.length % 2 === 1 && i === orderedDomains.length - 1}
           />
         ))}
       </div>

@@ -1,26 +1,13 @@
 import { Fragment, useEffect, useState } from 'react'
 
 const COMPANY_NAMES = {
-  openai: 'OpenAI',
-  mongodb: 'MongoDB',
-  xai: 'xAI',
-  deepmind: 'DeepMind',
-  'google deepmind': 'Google DeepMind',
-  github: 'GitHub',
-  youcom: 'You.com',
-  'you.com': 'You.com',
-  zoominfo: 'ZoomInfo',
-  coreweave: 'CoreWeave',
-  elevenlabs: 'ElevenLabs',
-  llamaindex: 'LlamaIndex',
-  langchain: 'LangChain',
-  thinkingmachines: 'Thinking Machines',
-  blackforestlabs: 'Black Forest Labs',
-  doordash: 'DoorDash',
-  mastec: 'MasTec',
-  mclane: 'McLane Company',
-  'mclane company': 'McLane Company',
-  aldi: 'ALDI',
+  openai: 'OpenAI', mongodb: 'MongoDB', xai: 'xAI', deepmind: 'DeepMind',
+  'google deepmind': 'Google DeepMind', github: 'GitHub', youcom: 'You.com',
+  'you.com': 'You.com', zoominfo: 'ZoomInfo', coreweave: 'CoreWeave',
+  elevenlabs: 'ElevenLabs', llamaindex: 'LlamaIndex', langchain: 'LangChain',
+  thinkingmachines: 'Thinking Machines', blackforestlabs: 'Black Forest Labs',
+  doordash: 'DoorDash', mastec: 'MasTec', mclane: 'McLane Company',
+  'mclane company': 'McLane Company', aldi: 'ALDI',
 }
 const NAME_ACRONYMS = new Set(['ai', 'ml', 'hr', 'api'])
 
@@ -36,14 +23,10 @@ function formatCompany(name) {
 
 function fmtDate(d) {
   if (!d) return ''
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric',
-  })
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// Modal drawer that lists the underlying postings backing a company's row.
 function PostingsDrawer({ company, onClose }) {
-  // Close on Escape so keyboard users aren't trapped.
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -110,27 +93,21 @@ export default function CompaniesPanel({ snapshot }) {
 
   return (
     <section className="count-bar-section">
-      <div className="section-header">
-        <span className="section-title">II. Where PMs Are Hiring Now</span>
+      <div className="section-rule">
+        <span className="section-title">Where PMs Are Hiring</span>
         <span className="section-meta">
           Ranked by active PM openings · click a row for details · snapshot as of {data.window_end}
         </span>
       </div>
 
-      <div className="co-table co-table-combined">
-        {/* Two empty cells for the rank + name columns so the three header
-            labels line up over their data columns (total / require AI / % AI). */}
+      <div className="co-table-combined">
         <span />
         <span />
-        <span className="co-th total">Total openings</span>
+        <span className="co-th total">Total</span>
         <span className="co-th ai">Require AI</span>
         <span className="co-th rate">% AI</span>
         <div className="co-table-rule" />
         {companies.map((co) => {
-          // Total bar is proportional to the largest company's openings; AI
-          // bar is the AI share of that company's own total (so it reads as
-          // "this much of THIS company's hiring is AI" rather than as a
-          // separate cross-company comparison).
           const w = (co.totalCount / maxTotal) * 100
           const wAiInside = co.totalCount > 0 ? (co.aiCount / co.totalCount) * w : 0
           const aiPct = Math.round(co.aiRate)
