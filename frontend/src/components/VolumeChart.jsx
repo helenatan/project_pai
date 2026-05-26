@@ -74,6 +74,10 @@ function VolumeTooltip({ active, payload, label, theme }) {
   )
 }
 
+// Earlier snapshots all carry the same backfilled baseline figure, so the chart
+// flatlines and adds no signal before this date. Clip to keep the trend honest.
+const CHART_START_DATE = '2026-05-21'
+
 // Stacked area chart: total active PM openings split into AI-required (accent)
 // and other (faint neutral). Reading is intuitive — the height of the whole
 // stack is volume; the AI share is the accent band on top.
@@ -82,7 +86,8 @@ export default function VolumeChart({ snapshots, theme }) {
 
   const c = getColors(theme)
 
-  const data = snapshots.map((s) => {
+  const visible = snapshots.filter((s) => s.snapshot_date >= CHART_START_DATE)
+  const data = visible.map((s) => {
     const total = s.total_postings ?? 0
     const aiRate = s.ai_penetration_rate
     const ai = s.top_ai_skills?.active_ai_total != null
@@ -97,7 +102,7 @@ export default function VolumeChart({ snapshots, theme }) {
     }
   })
 
-  const enoughData = snapshots.length >= 2
+  const enoughData = visible.length >= 2
   const totals = data.map((d) => d._total).filter((v) => v != null)
   const ymax = totals.length ? Math.ceil(Math.max(...totals) * 1.15 / 50) * 50 : 'auto'
 
@@ -166,9 +171,9 @@ export default function VolumeChart({ snapshots, theme }) {
           <div className="stub-track"><div className="stub-dot" /></div>
           <div className="stub-label">
             <strong>Baseline established — trend begins here</strong>
-            Today&rsquo;s snapshot: <strong>{snapshots.at(-1)?.total_postings?.toLocaleString()}</strong> active
+            Today&rsquo;s snapshot: <strong>{visible.at(-1)?.total_postings?.toLocaleString()}</strong> active
             US PM openings,
-            with <strong>{Math.round(Number(snapshots.at(-1)?.ai_penetration_rate ?? 0))}%</strong> requiring
+            with <strong>{Math.round(Number(visible.at(-1)?.ai_penetration_rate ?? 0))}%</strong> requiring
             AI skills. The daily trend appears once we&rsquo;ve accumulated more than one day.
           </div>
         </div>

@@ -26,6 +26,11 @@ function fmtDate(d) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function formatWindowEnd(d) {
+  if (!d) return ''
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
 function PostingsDrawer({ company, onClose }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -110,7 +115,7 @@ export default function CompaniesPanel({ snapshot }) {
       <div className="section-rule">
         <span className="section-title">Where PMs Are Hiring</span>
         <span className="section-meta">
-          Ranked by active PM openings · click a row for details · snapshot as of {data.window_end}
+          Ranked by active PM openings · click a row for details · snapshot as of {formatWindowEnd(data.window_end)}
         </span>
       </div>
 

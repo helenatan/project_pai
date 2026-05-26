@@ -52,46 +52,33 @@ body {
 /* ── Page container ──────────────────────────────── */
 .page { max-width: 960px; margin: 0 auto; padding: 0 1.75rem; }
 
-/* ── Site header (always dark band) ─────────────── */
+/* ── Site header (thin masthead, theme-aware) ─────── */
 .site-header {
-  position: sticky; top: 0; z-index: 10;
-  background: var(--bg-ink);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  padding: 0.875rem 0;
-  transition: background 0.2s;
+  background: transparent;
+  border-bottom: 1px solid var(--border-sub);
+  padding: 0.6rem 0;
+  transition: border-color 0.2s;
 }
 .header-inner {
   max-width: 960px; margin: 0 auto; padding: 0 1.75rem;
   display: flex; align-items: center; justify-content: space-between;
 }
-.site-brand { display: flex; flex-direction: column; gap: 0.1rem; line-height: 1.15; }
 .site-logo {
   font-family: 'Libre Baskerville', Georgia, serif;
-  font-size: 1.0625rem; font-weight: 700;
-  color: var(--ink-text); letter-spacing: 0.005em;
+  font-size: 0.95rem; font-weight: 700;
+  color: var(--text-1); letter-spacing: 0.005em;
+  transition: color 0.2s;
 }
-.site-tagline {
-  font-family: 'Libre Franklin', sans-serif;
-  font-size: 0.7rem; color: var(--text-3, #888);
-  letter-spacing: 0.04em; text-transform: uppercase;
-}
-.header-right { display: flex; align-items: center; gap: 1.25rem; }
-.header-dateline {
-  font-size: 0.68rem; color: #666;
-  letter-spacing: 0.05em; text-transform: uppercase;
-}
-[data-theme="dark"] .header-dateline { color: var(--text-3); }
 .theme-toggle {
   font-family: 'Libre Franklin', sans-serif;
   font-size: 0.68rem; font-weight: 600;
   letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--ink-text); background: transparent;
-  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text-2); background: transparent;
+  border: 1px solid var(--border);
   padding: 0.25rem 0.65rem; border-radius: 2px;
-  cursor: pointer; transition: border-color 0.15s, opacity 0.15s;
-  opacity: 0.65;
+  cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.theme-toggle:hover { opacity: 1; border-color: rgba(255,255,255,0.45); }
+.theme-toggle:hover { color: var(--text-1); border-color: var(--text-3); }
 
 /* ── Hero ────────────────────────────────────────── */
 .hed {
@@ -169,44 +156,43 @@ body {
   border-left: 2px solid var(--accent);
 }
 
-/* ── Metrics band (always dark in both modes) ────── */
+/* ── Metrics band (theme-aware) ──────────────────── */
 .metrics-band {
-  background: var(--bg-ink);
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
   margin-bottom: 2.75rem;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); }
 .metric-cell {
   padding: 1.5rem 1.75rem;
-  border-right: 1px solid rgba(255,255,255,0.07);
+  border-right: 1px solid var(--border-sub);
+  transition: border-color 0.2s;
 }
-[data-theme="dark"] .metric-cell { border-right-color: rgba(255,255,255,0.05); }
 .metric-cell:last-child { border-right: none; }
 .metric-label {
   font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; color: #999; margin-bottom: 0.5rem;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 0.5rem;
+  transition: color 0.2s;
 }
-[data-theme="dark"] .metric-label { color: var(--text-3); }
 .metric-value {
   font-family: 'Libre Baskerville', Georgia, serif;
   font-size: 2.75rem; font-weight: 700; line-height: 1;
-  color: #fff; letter-spacing: -0.02em; margin-bottom: 0.4rem;
+  color: var(--text-1); letter-spacing: -0.02em; margin-bottom: 0.4rem;
   font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
 }
-[data-theme="dark"] .metric-value { color: var(--text-1); }
 .metric-value.accent, .metric-value.ai-rate { color: var(--accent); }
 .metric-delta {
-  font-size: 0.78rem; font-weight: 600; color: #999;
+  font-size: 0.78rem; font-weight: 600; color: var(--text-3);
   font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
 }
-[data-theme="dark"] .metric-delta { color: var(--text-3); }
 .metric-delta.up { color: var(--up); }
 .metric-delta.down { color: var(--dn); }
-.metric-delta.muted { color: #777; font-style: italic; font-weight: 400; }
-[data-theme="dark"] .metric-delta.muted { color: var(--text-4); }
+.metric-delta.muted { color: var(--text-3); font-style: italic; font-weight: 400; }
 .metric-delta.amber { color: var(--accent); }
-.metric-note { font-size: 0.72rem; color: #888; margin-top: 0.3rem; line-height: 1.45; }
-[data-theme="dark"] .metric-note { color: var(--text-4); }
+.metric-note { font-size: 0.72rem; color: var(--text-3); margin-top: 0.3rem; line-height: 1.45; transition: color 0.2s; }
 
 /* ── Section headers ─────────────────────────────── */
 .section-block { margin-bottom: 2.75rem; }
@@ -227,7 +213,6 @@ body {
 .chart-wrap {
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-top: 4px solid var(--rule);
   padding: 1.25rem 0.75rem 0.5rem;
   transition: background 0.2s, border-color 0.2s;
 }
