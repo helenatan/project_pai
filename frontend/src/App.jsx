@@ -117,8 +117,8 @@ export default function App() {
 
         <div className="byline">
           <span><span className="live-dot" />Live data</span>
-          {lastUpdated && <span>Updated {lastUpdated}</span>}
-          <span>Adzuna · JSearch · Greenhouse</span>
+          {lastUpdated && <span>Data as of {lastUpdated}</span>}
+          <span>Sources: Adzuna · JSearch · Greenhouse</span>
         </div>
 
         {hasPartialData && (
