@@ -465,6 +465,15 @@ def extract_quote_snippet(description: str, keywords: list[str], max_len: int = 
     # from HTML labels. We also skip "About <Company>" boilerplate openings.
     HEADING_RE = re.compile(r"^[A-Z][A-Z &/\-]{2,}(?:\s|$)")
     BOILERPLATE_RE = re.compile(r"^(?:about\s+\w|the\s+role|role\s+overview|the\s+opportunity)", re.IGNORECASE)
+    # Anthropic's "How we're different" paragraph lists historical research
+    # papers ("Multimodal Neurons", "Circuit-Based Interpretability", "Concrete
+    # Problems in AI Safety"). That sentence happens to contain tracked
+    # keywords (multimodal, ai safety) but is research lineage, not role
+    # requirements — skip it so the picker advances to a real role sentence.
+    RESEARCH_LINEAGE_RE = re.compile(
+        r"Multimodal Neurons|Circuit-Based Interpretability|Concrete Problems in AI Safety",
+        re.IGNORECASE,
+    )
 
     def looks_like_heading(s: str) -> bool:
         if HEADING_RE.match(s):
@@ -482,6 +491,8 @@ def extract_quote_snippet(description: str, keywords: list[str], max_len: int = 
         if len(frag) < 25:
             continue
         if looks_like_heading(frag):
+            continue
+        if RESEARCH_LINEAGE_RE.search(frag):
             continue
         for pat in patterns:
             m = pat.search(frag)
@@ -793,41 +804,79 @@ def main():
             r for r in ft_ai
             if kw_set & set(r.get("ai_keyword_matches") or [])
         ]
+        # Stable-sort so Anthropic postings appear first within each domain's
+        # match list — the candidate cap below would otherwise drop them.
+        matching.sort(key=lambda r: 0 if (r.get("company_normalized") or "") == "anthropic" else 1)
         domain_matches[slug] = matching
         domain_counts[slug] = len(matching)
 
-    # Pick one sample posting per domain for its quote. Process the most
-    # constrained domains (fewest matching postings) first, and prefer a
-    # posting from a company not yet quoted — so the cards spread across
-    # companies for visual variety where the data allows.
+    # Pick one sample posting per domain for its quote. Priority order, applied
+    # in this sequence: (1) Anthropic if it has a match; (2) a company not yet
+    # quoted, so cards spread across companies for visual variety; (3) any
+    # remaining posting we haven't already used. Within each tier we walk the
+    # candidates and pick the first whose description actually yields a quote
+    # — this skips false-positive matches (e.g. a fashion brand named "rag &
+    # bone" matching the `rag` keyword) where extract_quote_snippet can't find
+    # a non-boilerplate sentence. Most-constrained domains run first.
+
+    # Pre-fetch descriptions for every candidate we might consider. Cap per
+    # domain so a giant matching list doesn't pull thousands of rows.
+    MAX_CANDIDATES_PER_DOMAIN = 12
+    candidate_raw_ids: set = set()
+    for matching in domain_matches.values():
+        for r in matching[:MAX_CANDIDATES_PER_DOMAIN]:
+            candidate_raw_ids.add(r["raw_id"])
+    desc_by_raw_id: dict = {}
+    if candidate_raw_ids:
+        raw_rows = _batched_in(
+            supabase, "job_postings_raw",
+            "id,company,title,url,description_text", list(candidate_raw_ids),
+        )
+        for row in raw_rows:
+            desc_by_raw_id[row["id"]] = row
+
     domain_sample_ids: dict[str, int] = {}
+    domain_sample_quotes: dict[str, str] = {}
     used_raw_ids: set = set()
     used_companies: set = set()
+
+    def _try_pick(slug, keywords, predicate, matching):
+        for r in matching[:MAX_CANDIDATES_PER_DOMAIN]:
+            if r["raw_id"] in used_raw_ids:
+                continue
+            if not predicate(r):
+                continue
+            raw = desc_by_raw_id.get(r["raw_id"])
+            if not raw:
+                continue
+            q = extract_quote_snippet(raw.get("description_text") or "", keywords)
+            if not q:
+                continue
+            return r, q
+        return None, None
+
     for slug in sorted(domain_matches, key=lambda s: domain_counts[s]):
         matching = domain_matches[slug]
         if not matching:
             continue
-        pick = (
-            next((r for r in matching
-                  if (r.get("company_normalized") or "") not in used_companies), None)
-            or next((r for r in matching if r["raw_id"] not in used_raw_ids), None)
-            or matching[0]
-        )
+        keywords = domain_keywords[slug]
+        pick, quote = (None, None)
+        for predicate in (
+            lambda r: (r.get("company_normalized") or "") == "anthropic",
+            lambda r: (r.get("company_normalized") or "") not in used_companies,
+            lambda r: True,
+        ):
+            pick, quote = _try_pick(slug, keywords, predicate, matching)
+            if pick:
+                break
+        if not pick:
+            continue
         domain_sample_ids[slug] = pick["raw_id"]
+        domain_sample_quotes[slug] = quote
         used_raw_ids.add(pick["raw_id"])
-        company = pick.get("company_normalized") or ""
-        if company:
-            used_companies.add(company)
-
-    # Batch-fetch description_text + company for one sample posting per domain
-    all_sample_raw_ids = list(set(domain_sample_ids.values()))
-    desc_by_raw_id: dict[int, dict] = {}
-    if all_sample_raw_ids:
-        raw_rows = _batched_in(
-            supabase, "job_postings_raw", "id,company,title,url,description_text", all_sample_raw_ids
-        )
-        for row in raw_rows:
-            desc_by_raw_id[row["id"]] = row
+        co = pick.get("company_normalized") or ""
+        if co:
+            used_companies.add(co)
 
     domain_items = []
     for slug, keywords in domain_keywords.items():
@@ -836,7 +885,7 @@ def main():
         domain_items.append({
             "slug":    slug,
             "count":   domain_counts.get(slug, 0),
-            "quote":   extract_quote_snippet(raw.get("description_text") or "", keywords) if raw else None,
+            "quote":   domain_sample_quotes.get(slug),
             "company": (raw.get("company") or None) if raw else None,
             "title":   (raw.get("title") or None) if raw else None,
             "url":     (raw.get("url") or None) if raw else None,
