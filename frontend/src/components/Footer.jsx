@@ -79,7 +79,11 @@ export default function Footer({ snapshot }) {
           <strong>How AI Is Reshaping PM Hiring</strong>
           {date && <> · {date}</>}
           <br />
-          Built by Helena · Updated daily at 6&nbsp;a.m. PT
+          Built by{' '}
+          <a href="https://www.linkedin.com/in/helenatan/" target="_blank" rel="noopener noreferrer">
+            Helena Tan
+          </a>{' '}
+          · Updated every morning, Pacific time
         </div>
       </div>
     </footer>

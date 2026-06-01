@@ -77,8 +77,10 @@ body {
   border: 1px solid var(--border);
   padding: 0.25rem 0.65rem; border-radius: 2px;
   cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
+  display: inline-flex; align-items: center; gap: 0.4rem;
 }
 .theme-toggle:hover { color: var(--text-1); border-color: var(--text-3); }
+.theme-toggle-icon { display: block; flex-shrink: 0; }
 
 /* ── Hero ────────────────────────────────────────── */
 .hed {
