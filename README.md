@@ -33,7 +33,6 @@ Add these secrets to your GitHub repo (Settings → Secrets → Actions):
 |---|---|
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_SERVICE_KEY` | Service role key (for pipeline writes) |
-| `SUPABASE_ANON_KEY` | Anon key (for keep-alive ping) |
 | `ADZUNA_APP_ID` | Adzuna developer app ID |
 | `ADZUNA_APP_KEY` | Adzuna developer app key |
 | `JSEARCH_API_KEY` | RapidAPI key for JSearch |

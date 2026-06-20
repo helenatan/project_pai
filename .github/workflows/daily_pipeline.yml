@@ -105,7 +105,7 @@ jobs:
           username: ${{ secrets.ALERT_EMAIL_USER }}
           password: ${{ secrets.ALERT_EMAIL_PASS }}
           from: PM Adaptation Index <${{ secrets.ALERT_EMAIL_USER }}>
-          to: 5124088+helenatan@users.noreply.github.com
+          to: ${{ secrets.ALERT_EMAIL_USER }}
           subject: "PM Adaptation Index: pipeline OK (${{ github.run_number }})"
           body: "Daily pipeline completed. Snapshot written."
 
@@ -118,6 +118,6 @@ jobs:
           username: ${{ secrets.ALERT_EMAIL_USER }}
           password: ${{ secrets.ALERT_EMAIL_PASS }}
           from: PM Adaptation Index <${{ secrets.ALERT_EMAIL_USER }}>
-          to: 5124088+helenatan@users.noreply.github.com
+          to: ${{ secrets.ALERT_EMAIL_USER }}
           subject: "ALERT: PM Adaptation Index pipeline FAILED"
           body: "Daily pipeline failed. Check GitHub Actions logs immediately."

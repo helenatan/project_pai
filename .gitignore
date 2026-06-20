@@ -29,3 +29,6 @@ logs/
 # Backups
 backups/
 .vercel
+
+# Internal strategy doc (not for public repo)
+community_strategy.md
