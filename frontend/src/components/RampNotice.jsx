@@ -17,8 +17,10 @@ export default function RampNotice({ snapshot }) {
         <p>
           <strong>Today.</strong>{' '}
           {total != null && (
-            <>{fmtNum(total)} active US <strong>Product Manager</strong> openings indexed across
-            the job feeds and curated company boards we currently track.</>
+            <>{fmtNum(total)} distinct US <strong>Product Manager</strong> openings seen in our
+            trailing tracking window — job-feed postings from the last 45 days plus curated company
+            boards re-confirmed within 7. This measures recent posting volume, not a verified
+            count of roles live right now.</>
           )}
           {aiTotal != null && aiRate != null && (
             <> Of those, <strong>{fmtNum(aiTotal)} ({Math.round(Number(aiRate))}%)</strong> explicitly require AI skills.</>

@@ -220,6 +220,11 @@ body {
 }
 .recharts-text { font-family: 'Libre Franklin', sans-serif !important; }
 .recharts-default-legend { font-family: 'Libre Franklin', sans-serif !important; }
+.chart-caveat {
+  font-size: 0.78rem; color: var(--text-3); line-height: 1.5;
+  margin: 0.85rem 0.25rem 0.15rem; font-style: italic;
+  transition: color 0.2s;
+}
 
 /* ── Baseline stub (before enough data) ──────────── */
 .baseline-stub {
