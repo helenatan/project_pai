@@ -57,7 +57,7 @@ def fetch_snapshots(supabase: Client, since: date, until: date) -> list[dict]:
 def generate_digest(payload: dict) -> str:
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=350,
         system=SYSTEM_PROMPT,
         messages=[
