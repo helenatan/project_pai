@@ -78,6 +78,12 @@ function VolumeTooltip({ active, payload, label, theme }) {
 // flatlines and adds no signal before this date. Clip to keep the trend honest.
 const CHART_START_DATE = '2026-05-21'
 
+// Daily indexing began 2026-05-17. A posting counts toward the total for up to
+// 45 days, so the trailing window does not begin expiring — and the series does
+// not reach steady state — until ~2026-07-01. Until then part of the rise just
+// reflects the window filling, so we show a ramp-up caveat that auto-retires.
+const RAMP_STEADY_DATE = '2026-07-01'
+
 // Stacked area chart: total active PM openings split into AI-required (accent)
 // and other (faint neutral). Reading is intuitive — the height of the whole
 // stack is volume; the AI share is the accent band on top.
@@ -106,11 +112,14 @@ export default function VolumeChart({ snapshots, theme }) {
   const totals = data.map((d) => d._total).filter((v) => v != null)
   const ymax = totals.length ? Math.ceil(Math.max(...totals) * 1.15 / 50) * 50 : 'auto'
 
+  const latestDate = visible.at(-1)?.snapshot_date
+  const showRampCaveat = latestDate != null && latestDate < RAMP_STEADY_DATE
+
   return (
     <section className="section-block">
       <div className="section-rule">
         <span className="section-title">Hiring Volume &amp; AI Demand</span>
-        <span className="section-meta">Daily · stacked: AI-required share within total active openings</span>
+        <span className="section-meta">Daily · stacked: AI-required share within total tracked openings</span>
       </div>
       {enoughData ? (
         <div className="chart-wrap">
@@ -165,6 +174,14 @@ export default function VolumeChart({ snapshots, theme }) {
               />
             </AreaChart>
           </ResponsiveContainer>
+          {showRampCaveat && (
+            <p className="chart-caveat">
+              Daily indexing began May&nbsp;17, 2026. Because a posting counts toward the total for
+              up to 45&nbsp;days, the trailing window doesn&rsquo;t reach steady state until
+              ~July&nbsp;1 — until then, part of this upward trend reflects the measurement window
+              filling rather than genuine growth in hiring.
+            </p>
+          )}
         </div>
       ) : (
         <div className="baseline-stub">

@@ -41,9 +41,14 @@ export default function HeroMetrics({ snapshot, daysOfData }) {
     <div className="metrics-band">
       <div className="metrics-grid">
         <div className="metric-cell">
-          <div className="metric-label">Active PM Openings (US)</div>
+          <div className="metric-label">PM Openings Tracked (US)</div>
           <div className="metric-value">{fmtNum(totalActive)}</div>
           <div className={`metric-delta ${d1.cls}`}>{d1.text}</div>
+          <div className="metric-note">
+            Distinct postings seen in our trailing window (feed ≤45 days, boards
+            re-confirmed ≤7) — not a verified live-openings count.{' '}
+            <a href="#methodology" className="ramp-link">Methodology</a>
+          </div>
         </div>
         <div className="metric-cell">
           <div className="metric-label">% Requiring AI Skills</div>

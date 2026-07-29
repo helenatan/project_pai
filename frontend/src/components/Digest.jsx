@@ -10,7 +10,7 @@ export default function Digest({ snapshot }) {
   return (
     <section className="signal">
       <div className="signal-kicker">
-        Weekly Signal<br />{digestDate}
+        Daily Signal<br />{digestDate}
       </div>
       <p className="signal-body">{snapshot.summary_text}</p>
     </section>

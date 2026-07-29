@@ -954,7 +954,7 @@ def main():
         "top_ai_skills": top_ai_skills,
         "top_employers_ai_skills": top_employers_ai_skills,
         # summary_text and digest_generated_at are intentionally excluded from the upsert
-        # so Saturday's digest is never overwritten by a later reprocessing run
+        # so a day's digest is never overwritten by a later reprocessing run
     }
 
     # Use raw upsert that preserves summary_text and digest_generated_at

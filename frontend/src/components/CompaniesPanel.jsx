@@ -50,7 +50,7 @@ function PostingsDrawer({ company, onClose }) {
       <div className="drawer" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-head">
           <div>
-            <div className="drawer-eyebrow">Active PM openings</div>
+            <div className="drawer-eyebrow">PM openings tracked</div>
             <h3 className="drawer-title">{formatCompany(company.company)}</h3>
             <div className="drawer-sub">
               {company.total_count} open · {company.ai_count} require AI ({company.ai_rate}%)
@@ -115,7 +115,7 @@ export default function CompaniesPanel({ snapshot }) {
       <div className="section-rule">
         <span className="section-title">Where PMs Are Hiring</span>
         <span className="section-meta">
-          Ranked by active PM openings · click a row for details · snapshot as of {formatWindowEnd(data.window_end)}
+          Ranked by PM openings tracked · click a row for details · snapshot as of {formatWindowEnd(data.window_end)}
         </span>
       </div>
 
