@@ -12,7 +12,9 @@ A daily data pipeline that pulls PM job postings from Adzuna and JSearch, detect
 [Adzuna API] ─┐
                ├─► fetch.py ─► job_postings_raw ─► enrich.py ─► job_postings_enriched ─► aggregate.py ─► daily_snapshots ─► React Dashboard
 [JSearch API] ─┘                                                                                      │
-                                                                                          digest.py (Saturdays) ─► Buttondown email
+                                                                                          check_coverage.py (fails run on silent/thin sources)
+                                                                                          digest.py ─► Buttondown email
+                                                                                          backup.py (Saturdays, backup.yml) ─► 90-day artifact + backups/*.json.gz
 ```
 
 Pipeline runs as GitHub Actions cron jobs. No backend server. Frontend reads from Supabase via the public anon key.

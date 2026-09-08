@@ -48,12 +48,22 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python pipeline/scripts/aggregate.py
 
+      # Fails the run (and fires the alert) when any source is missing, logged
+      # as failed, or fetched well below its trailing baseline. Runs after the
+      # aggregator so the degraded snapshot is already written, and before the
+      # digest so a digest is never sent on broken coverage.
+      - name: Coverage check — fail on silent or thin sources
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/check_coverage.py
+
       - name: QA check — top 10 companies vs live ATS
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: python pipeline/scripts/test_top_companies.py
-        continue-on-error: true   # report discrepancies but don't block digest/backup
+        continue-on-error: true   # report discrepancies but don't block digest
 
       - name: Run digest (Saturdays only -- script self-guards)
         env:
@@ -63,38 +73,7 @@ jobs:
           BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
         run: python pipeline/scripts/digest.py
 
-      - name: Backup snapshots (Saturdays only)
-        if: ${{ github.event.schedule == '0 14 * * 6' || (github.event_name == 'workflow_dispatch') }}
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python pipeline/scripts/backup.py
-        continue-on-error: true
-
-      - name: Upload backup artifact (snapshots + raw + enriched)
-        if: ${{ github.event.schedule == '0 14 * * 6' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: pai-backup-${{ github.run_number }}
-          path: |
-            backup_snapshots.json
-            backup_raw.json
-            backup_enriched.json
-            backup_fetch_log.json
-          retention-days: 90
-
-      # First-of-month: commit snapshot dump to repo for permanent record
-      # (artifacts expire at 90 days; this is the durable copy)
-      - name: Commit monthly snapshot to repo
-        if: ${{ github.event.schedule == '0 14 * * 6' && github.event.schedule == '0 14 1 * *' }}
-        run: |
-          mkdir -p backups
-          cp backup_snapshots.json "backups/snapshots_$(date +%Y%m).json"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backups/
-          git commit -m "chore: monthly snapshot archive [skip ci]" || echo "nothing to commit"
-          git push
+      # Weekly backups live in .github/workflows/backup.yml (Saturdays + manual).
 
       - name: Alert on success
         if: success()

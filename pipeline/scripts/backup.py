@@ -1,12 +1,16 @@
 """
 backup.py -- Dump daily_snapshots, job_postings_raw, job_postings_enriched, fetch_log to JSON files.
-Run Saturdays by the daily pipeline workflow. Output files are uploaded as GitHub Actions artifacts.
+Run Saturdays by .github/workflows/backup.yml. All four dumps are uploaded as a
+90-day GitHub Actions artifact; the two small ones (snapshots, fetch_log) are
+also committed gzipped to backups/ as the durable point-in-time record.
+Exits non-zero if any table fails to dump.
 """
 
 import json
 import logging
 import os
-from datetime import datetime
+import sys
+from datetime import datetime, timezone
 
 from supabase import create_client, Client
 
@@ -51,7 +55,7 @@ def dump_table(supabase: Client, table: str, output_file: str):
 
     with open(output_file, "w") as f:
         json.dump(
-            {"table": table, "exported_at": datetime.utcnow().isoformat(), "rows": all_rows},
+            {"table": table, "exported_at": datetime.now(timezone.utc).isoformat(), "rows": all_rows},
             f,
             default=str,
             indent=2,
@@ -61,11 +65,16 @@ def dump_table(supabase: Client, table: str, output_file: str):
 
 def main():
     supabase = get_supabase()
+    failed = []
     for table, output_file in TABLES:
         try:
             dump_table(supabase, table, output_file)
         except Exception as e:
             log.error(f"Failed to backup {table}: {e}")
+            failed.append(table)
+    if failed:
+        log.error(f"Backup incomplete, tables failed: {failed}")
+        sys.exit(1)
     log.info("Backup complete.")
 
 
