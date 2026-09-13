@@ -1,7 +1,11 @@
 """
 digest.py -- Saturday-only. Generate weekly digest via Claude, update snapshot, send via Buttondown.
+
+Backfill: `python digest.py --as-of YYYY-MM-DD` runs the digest as if today were that date
+(bypasses the Saturday guard). Use it to re-send a week whose scheduled run failed.
 """
 
+import argparse
 import json
 import logging
 import os
@@ -92,12 +96,28 @@ def send_digest_email(subject: str, body: str):
     log.info(f"Email scheduled via Buttondown for {publish_at}: {resp.status_code}")
 
 
-def main():
-    if date.today().weekday() != 5:  # 5 = Saturday
+def parse_args(argv=None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate and send the weekly digest.")
+    parser.add_argument(
+        "--as-of",
+        type=date.fromisoformat,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Backfill: run as if today were this date and skip the Saturday guard.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
+
+    if args.as_of is None and date.today().weekday() != 5:  # 5 = Saturday
         log.info("Not Saturday -- digest skipped")
         sys.exit(0)
 
-    today = date.today()
+    today = args.as_of or date.today()
+    if args.as_of:
+        log.warning(f"Backfill mode: running digest as of {today}")
     seven_days_ago = today - timedelta(days=7)
 
     supabase = get_supabase()

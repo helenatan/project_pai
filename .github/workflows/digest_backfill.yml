@@ -1,0 +1,87 @@
+name: Digest Backfill (manual)
+
+# Re-run the weekly digest for a past Saturday whose scheduled run failed.
+# Manual only. Does not touch the daily pipeline. Runs digest.py with --as-of,
+# then reads the snapshot row and the newest Buttondown email back for verification.
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "Saturday to backfill (YYYY-MM-DD)"
+        required: true
+        type: string
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Run digest as of ${{ inputs.as_of }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+        run: python pipeline/scripts/digest.py --as-of "${{ inputs.as_of }}"
+
+      - name: Verify snapshot row and Buttondown email
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          AS_OF: ${{ inputs.as_of }}
+        run: |
+          python - <<'PY'
+          import os, requests
+          from supabase import create_client
+
+          as_of = os.environ["AS_OF"]
+          sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+
+          row = (sb.table("daily_snapshots")
+                   .select("snapshot_date,summary_text,digest_generated_at")
+                   .eq("snapshot_date", as_of).execute()).data
+          print(f"=== daily_snapshots row for {as_of} ===")
+          if not row:
+              print("  NOT FOUND")
+          else:
+              r = row[0]
+              txt = r.get("summary_text") or ""
+              print(f"  digest_generated_at: {r.get('digest_generated_at')}")
+              print(f"  summary_text ({len(txt)} chars): {txt}")
+
+          recent = (sb.table("daily_snapshots")
+                      .select("snapshot_date,digest_generated_at")
+                      .not_.is_("summary_text", "null")
+                      .order("snapshot_date", desc=True).limit(8).execute()).data
+          print("=== most recent rows with a digest ===")
+          for r in recent:
+              print(f"  {r['snapshot_date']}  generated {r.get('digest_generated_at')}")
+
+          resp = requests.get(
+              "https://api.buttondown.email/v1/emails",
+              headers={"Authorization": f"Token {os.environ['BUTTONDOWN_API_KEY']}"},
+              params={"ordering": "-creation_date", "page_size": 3},
+              timeout=30,
+          )
+          print(f"=== Buttondown newest emails (HTTP {resp.status_code}) ===")
+          if resp.ok:
+              for e in resp.json().get("results", [])[:3]:
+                  print(f"  {e.get('creation_date')}  status={e.get('status')}  "
+                        f"publish={e.get('publish_date')}  subject={e.get('subject')!r}")
+          else:
+              print(resp.text[:500])
+          PY
