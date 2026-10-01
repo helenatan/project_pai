@@ -26,6 +26,8 @@ from pathlib import Path
 import requests
 from supabase import create_client, Client
 
+from fetch_status import classify, is_hard_failure
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -265,12 +267,10 @@ def fetch_source(
             log.error(f"  {company} ({slug}) failed: {e}")
             errors.append(f"{company}: {e}")
 
-    if records_fetched == 0 and errors:
-        status = "failed"
-    elif errors:
-        status = "partial"
-    else:
-        status = "ok"
+    # Zero rows is a failure even when every board responded (see fetch_status.py).
+    status, error_message = classify(records_fetched, errors)
+    if status == "failed" and not errors:
+        log.error(f"{source}: 0 PM records across all boards with no errors. Logging as failed (silent zero).")
 
     return {
         "source": source,
@@ -278,7 +278,7 @@ def fetch_source(
         "records_inserted": records_inserted,
         "records_skipped": records_skipped,
         "status": status,
-        "error_message": "; ".join(errors)[:1000] if errors else None,
+        "error_message": error_message[:1000] if error_message else None,
     }
 
 
@@ -320,11 +320,13 @@ def main():
         log.info(f"--- Fetching {source} boards ---")
         result = fetch_source(supabase, source, boards, run_date)
         write_fetch_log(supabase, run_date, result)
-        if result["status"] == "failed":
+        # Silent zeros are logged as failed but do not abort the step;
+        # check_coverage.py fails the pipeline after aggregate has run.
+        if is_hard_failure(result):
             failed.append(source)
 
     if failed:
-        log.error(f"Sources failed: {failed}. Exiting non-zero.")
+        log.error(f"Sources failed with errors: {failed}. Exiting non-zero.")
         sys.exit(1)
 
 

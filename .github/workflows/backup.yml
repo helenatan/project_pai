@@ -1,0 +1,71 @@
+name: Weekly Backup
+
+on:
+  schedule:
+    - cron: '0 17 * * 6'   # Saturdays 10am PT, three hours after the daily pipeline starts
+  workflow_dispatch:         # safe to run by hand: touches no pipeline tables, sends no digest
+
+permissions:
+  contents: write            # commits backups/*.json
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Dump tables
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python pipeline/scripts/backup.py
+
+      # Full row-level copy (raw + enriched are large). Expires after 90 days.
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pai-backup-${{ github.run_number }}
+          path: |
+            backup_snapshots.json
+            backup_raw.json
+            backup_enriched.json
+            backup_fetch_log.json
+          retention-days: 90
+          if-no-files-found: error
+
+      # Durable point-in-time record: the two small tables, gzipped and committed weekly.
+      # Restore: gunzip -c backups/snapshots_YYYY-MM-DD.json.gz | jq '.rows'
+      - name: Commit snapshot and fetch_log archives
+        run: |
+          STAMP=$(date -u +%Y-%m-%d)
+          mkdir -p backups
+          gzip -9 -c backup_snapshots.json > "backups/snapshots_${STAMP}.json.gz"
+          gzip -9 -c backup_fetch_log.json > "backups/fetch_log_${STAMP}.json.gz"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          git commit -m "chore: weekly backup ${STAMP} [skip ci]" || { echo "nothing to commit"; exit 0; }
+          git push
+
+      - name: Alert on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.ALERT_EMAIL_USER }}
+          password: ${{ secrets.ALERT_EMAIL_PASS }}
+          from: PM Adaptation Index <${{ secrets.ALERT_EMAIL_USER }}>
+          to: ${{ secrets.ALERT_EMAIL_USER }}
+          subject: "ALERT: PM Adaptation Index weekly backup FAILED"
+          body: "Weekly backup workflow failed. Check GitHub Actions logs."

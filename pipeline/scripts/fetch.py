@@ -3,7 +3,9 @@ fetch.py -- Pull PM job listings from Adzuna and JSearch for the previous 24 hou
 
 Writes raw records to job_postings_raw (dedup via UNIQUE constraint).
 Writes one fetch_log row per source per run.
-Exits non-zero if either source has status='failed'.
+Exits non-zero on a hard failure (errors and zero rows). A silent zero
+(HTTP 200, empty payload) is logged as failed but lets the step continue;
+check_coverage.py fails the pipeline later in the run.
 """
 
 import os
@@ -14,6 +16,8 @@ from datetime import date, timedelta
 
 import requests
 from supabase import create_client, Client
+
+from fetch_status import classify, is_hard_failure
 
 logging.basicConfig(
     level=logging.INFO,
@@ -141,12 +145,7 @@ def fetch_adzuna(supabase: Client, run_date: date) -> dict:
             errors.append(str(e))
             break
 
-    if records_inserted == 0 and errors:
-        status = "failed"
-    elif errors:
-        status = "partial"
-    else:
-        status = "ok"
+    status, error_message = classify(records_fetched, errors)
 
     return {
         "source": "adzuna",
@@ -155,7 +154,7 @@ def fetch_adzuna(supabase: Client, run_date: date) -> dict:
         "records_skipped": records_skipped,
         "adzuna_total_count": adzuna_total_count,
         "status": status,
-        "error_message": "; ".join(errors) if errors else None,
+        "error_message": error_message,
     }
 
 
@@ -238,12 +237,10 @@ def fetch_jsearch(supabase: Client, run_date: date) -> dict:
             log.error(f"JSearch page {page_num} error: {e}")
             errors.append(str(e))
 
-    if records_inserted == 0 and errors:
-        status = "failed"
-    elif errors:
-        status = "partial"
-    else:
-        status = "ok"
+    # Zero rows is a failure even on HTTP 200 (see fetch_status.py).
+    status, error_message = classify(records_fetched, errors)
+    if status == "failed" and not errors:
+        log.error("JSearch returned 0 results with no errors. Logging as failed (silent zero).")
 
     return {
         "source": "jsearch",
@@ -252,7 +249,7 @@ def fetch_jsearch(supabase: Client, run_date: date) -> dict:
         "records_skipped": records_skipped,
         "adzuna_total_count": None,
         "status": status,
-        "error_message": "; ".join(errors) if errors else None,
+        "error_message": error_message,
     }
 
 
@@ -293,8 +290,11 @@ def main():
 
     log.info(f"Fetch complete. JSearch: {jsearch_result['status']}")
 
-    if jsearch_result["status"] == "failed":
-        log.error("JSearch failed. Exiting non-zero to fail the pipeline.")
+    # A silent zero is logged as failed but does not abort here: enrich and
+    # aggregate still run (snapshot gets data_quality_status=degraded) and
+    # check_coverage.py fails the pipeline afterwards.
+    if is_hard_failure(jsearch_result):
+        log.error("JSearch failed with errors. Exiting non-zero to fail the pipeline.")
         sys.exit(1)
 
 

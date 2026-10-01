@@ -26,8 +26,9 @@ build/
 *.log
 logs/
 
-# Backups
-backups/
+# Backup dumps produced by pipeline/scripts/backup.py at the repo root.
+# backups/*.json.gz (weekly snapshot + fetch_log archives) are committed on purpose.
+backup_*.json
 .vercel
 
 # Internal strategy doc (not for public repo)
